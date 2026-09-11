@@ -19,15 +19,26 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
   min-height: 100vh;
   background-color: #f1f5f9;
   color: #0f172a;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
+  font-size: 16.5px;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+  background-color: #f1f5f9;
 }
 
 /* Ensure crisp font rendering without sub-pixel fractional blur */
@@ -50,3 +61,13 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* Glassmorphism Top Navigation Effect */
+.glass-navbar {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px) saturate(190%);
+  -webkit-backdrop-filter: blur(10px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+

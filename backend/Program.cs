@@ -60,6 +60,10 @@ try
     builder.Services.AddSingleton<ILogService, LogService>();
     builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 
+    // Register Attendance Processing & Execution History Services
+    builder.Services.AddSingleton<IProcessHistoryService, ProcessHistoryService>();
+    builder.Services.AddScoped<IAttendanceProcessService, AttendanceProcessService>();
+
     // Register Autonomous 24/7 Scheduler Service (Runs independently in background)
     builder.Services.AddSingleton<ISchedulerService, SchedulerService>();
     builder.Services.AddHostedService(sp => (SchedulerService)sp.GetRequiredService<ISchedulerService>());
@@ -67,6 +71,18 @@ try
     var app = builder.Build();
 
     app.UseCors("AllowAll");
+
+    // Force no-cache on all /api endpoints so browsers and proxies always receive latest data
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate, max-age=0";
+            context.Response.Headers.Pragma = "no-cache";
+            context.Response.Headers.Expires = "-1";
+        }
+        await next();
+    });
 
     // Clean API Endpoints
     app.MapGet("/", () => Results.Ok(new
@@ -87,13 +103,38 @@ try
 
     app.MapPost("/api/scheduler/config", async (ISchedulerService scheduler, UpdateSchedulerRequest req) =>
     {
-        var result = await scheduler.UpdateConfigAsync(req.DailyTime, req.IsEnabled ?? true);
+        var result = await scheduler.UpdateConfigAsync(req.DailyTime, req.IsEnabled, req.Schedules);
         return Results.Ok(result);
     });
 
-    app.MapPost("/api/scheduler/run-now", async (ISchedulerService scheduler) =>
+    // Top 50 Execution History Logs Endpoint
+    app.MapGet("/api/scheduler/history", (IProcessHistoryService history) => Results.Ok(history.GetTopHistory(50)));
+
+    // Manual Execution Trigger Endpoint (Supports FromDate and ToDate range, with fallback to TargetDate / Today)
+    app.MapPost("/api/scheduler/run-now", async (IAttendanceProcessService processService, RunNowRequest? req) =>
     {
-        var result = await scheduler.TriggerRunNowAsync();
+        DateTime fromDate;
+        DateTime toDate;
+
+        if (req != null && !string.IsNullOrEmpty(req.FromDate) && DateTime.TryParse(req.FromDate, out var parsedFrom))
+        {
+            fromDate = parsedFrom;
+            toDate = (req != null && !string.IsNullOrEmpty(req.ToDate) && DateTime.TryParse(req.ToDate, out var parsedTo))
+                ? parsedTo
+                : parsedFrom;
+        }
+        else if (req != null && !string.IsNullOrEmpty(req.TargetDate) && DateTime.TryParse(req.TargetDate, out var parsedTarget))
+        {
+            fromDate = parsedTarget;
+            toDate = parsedTarget;
+        }
+        else
+        {
+            fromDate = DateTime.Today;
+            toDate = DateTime.Today;
+        }
+
+        var result = await processService.ExecuteForDateRangeAsync(fromDate, toDate, "Manual Trigger (On-Demand)");
         return Results.Ok(result);
     });
 
@@ -110,5 +151,6 @@ finally
     Log.CloseAndFlush();
 }
 
-public record UpdateSchedulerRequest(string DailyTime, bool? IsEnabled);
+public record UpdateSchedulerRequest(string? DailyTime, bool? IsEnabled, List<KotaProcess.Api.Services.ScheduledTimeSlot>? Schedules = null);
+public record RunNowRequest(string? FromDate, string? ToDate, string? TargetDate);
 

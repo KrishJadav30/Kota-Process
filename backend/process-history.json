@@ -1,0 +1,14 @@
+[
+  {
+    "Id": "b05ebd660dfd45ca9763139020c0f528",
+    "ProcessDate": "2026-10-01 to 2026-10-31",
+    "ExecutedAt": "2026-09-11T08:46:12.406289Z",
+    "Status": "Success",
+    "DurationMs": 466,
+    "RowsUpdated": 124,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 02:16:12 PM. Completed in 466ms. Updated 124 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  }
+]

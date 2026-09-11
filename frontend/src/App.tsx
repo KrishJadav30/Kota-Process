@@ -13,7 +13,7 @@ export function App() {
       <Navbar currentPage={currentPage} onSelectPage={setCurrentPage} />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-30 sm:pt-36 pb-24 sm:pb-32">
         {currentPage === 'home' && (
           <HomePage onNavigate={setCurrentPage} />
         )}
