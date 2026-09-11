@@ -20,7 +20,6 @@ A full-stack automated task scheduler built with **ASP.NET Core Web API (.NET 10
 │   └── workflows/
 │       └── ci.yml               # GitHub Actions CI/CD Pipeline
 ├── backend/                     # ASP.NET Core Web API
-│   ├── Controllers/             # API Endpoints
 │   ├── Services/
 │   │   ├── EnvService.cs        # Dynamic root .env loader
 │   │   ├── DatabaseService.cs   # MSSQL connection tester & queries
@@ -67,19 +66,23 @@ JWT_SECRET=your_jwt_secret_here
 ## 🚀 Getting Started
 
 ### 1. Run the Backend (.NET Web API)
+
 ```bash
 cd backend
 dotnet restore
 dotnet watch
 ```
+
 The backend will automatically bind to `BACKEND_PORT` (e.g., `http://localhost:5001`).
 
 ### 2. Run the Frontend (React + Vite)
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
 The frontend dev server will launch on `FRONTEND_PORT` (e.g., `http://localhost:5173`) and automatically proxy `/api` requests to the backend.
 
 ---

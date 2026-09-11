@@ -1,60 +1,71 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { api, type AppStatus, type DbStatus } from '@/api'
-import { CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 
 export function App() {
   const [appStatus, setAppStatus] = useState<AppStatus | null>(null)
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [existingLogs, setExistingLogs] = useState<string[]>([])
-  const [loading, setLoading] = useState<boolean>(true)
   const [testingDb, setTestingDb] = useState<boolean>(false)
 
-  const loadStatus = async () => {
-    setLoading(true)
-    try {
-      const status = await api.getStatus()
-      setAppStatus(status)
-    } catch {
-      setAppStatus(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadLogsList = async () => {
-    try {
-      const data = await api.getExistingLogs()
-      setExistingLogs(data.existingFiles || [])
-    } catch (err) {
-      console.warn('Failed loading logs list:', err)
-    }
-  }
-
-  const testDb = async () => {
+  const testDb = useCallback(async (server?: string, database?: string) => {
     setTestingDb(true)
     try {
       const db = await api.checkDatabase()
       setDbStatus(db)
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to connect to database'
       setDbStatus({
         isConnected: false,
-        message: err.message || 'Failed to connect to database',
-        server: appStatus?.dbServer || '192.168.1.25',
-        database: appStatus?.dbDatabase || 'WebmisDB',
+        message,
+        server: server || '192.168.1.25',
+        database: database || 'WebmisDB',
         latencyMs: 0
       })
     } finally {
       setTestingDb(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    loadStatus()
-    testDb()
-    loadLogsList()
+    let isMounted = true
+
+    async function initialize() {
+      try {
+        const [statusRes, logsRes, dbRes] = await Promise.allSettled([
+          api.getStatus(),
+          api.getExistingLogs(),
+          api.checkDatabase()
+        ])
+
+        if (!isMounted) return
+
+        if (statusRes.status === 'fulfilled') {
+          setAppStatus(statusRes.value)
+        } else {
+          setAppStatus(null)
+        }
+
+        if (logsRes.status === 'fulfilled') {
+          setExistingLogs(logsRes.value.existingFiles || [])
+        }
+
+        if (dbRes.status === 'fulfilled') {
+          setDbStatus(dbRes.value)
+        }
+      } catch (err) {
+        console.warn('Initialization error:', err)
+      }
+    }
+
+    initialize()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const isBackendOnline = appStatus !== null
@@ -144,7 +155,7 @@ export function App() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={testDb}
+                    onClick={() => testDb(appStatus?.dbServer, appStatus?.dbDatabase)}
                     disabled={testingDb}
                     className="h-9 px-3 text-xs border-2 border-slate-400 bg-white hover:bg-slate-100 text-slate-950 font-bold cursor-pointer"
                   >
