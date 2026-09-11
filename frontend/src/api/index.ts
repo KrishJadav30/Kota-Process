@@ -100,6 +100,43 @@ export const api = {
     })
     if (!res.ok) throw new Error(`Failed to trigger process run: ${res.statusText}`)
     return res.json()
+  },
+
+  async getManualSwappingHistory(): Promise<ManualHistoryItem[]> {
+    const res = await fetch(`/api/manual-swapping/history?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
+    if (!res.ok) throw new Error(`Failed to get manual swapping history: ${res.statusText}`)
+    return res.json()
+  },
+
+  async executeManualSwapping(fromDate: string, toDate: string): Promise<ManualHistoryItem> {
+    const res = await fetch(`/api/manual-swapping/execute?_t=${Date.now()}`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      body: JSON.stringify({ fromDate, toDate })
+    })
+    if (!res.ok) throw new Error(`Failed to execute manual swapping: ${res.statusText}`)
+    return res.json()
   }
 }
+
+export interface ManualHistoryItem {
+  id: string
+  processDate: string
+  executedAt: string
+  status: 'Success' | 'Failed'
+  durationMs: number
+  rowsUpdated: number
+  triggerSource: string
+  message: string
+  errorMessage?: string | null
+}
+
 

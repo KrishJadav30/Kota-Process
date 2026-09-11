@@ -64,6 +64,10 @@ try
     builder.Services.AddSingleton<IProcessHistoryService, ProcessHistoryService>();
     builder.Services.AddScoped<IAttendanceProcessService, AttendanceProcessService>();
 
+    // Register 100% Manual Swapping (Entry 2) Services
+    builder.Services.AddSingleton<IManualHistoryService, ManualHistoryService>();
+    builder.Services.AddScoped<IManualSwappingService, ManualSwappingService>();
+
     // Register Autonomous 24/7 Scheduler Service (Runs independently in background)
     builder.Services.AddSingleton<ISchedulerService, SchedulerService>();
     builder.Services.AddHostedService(sp => (SchedulerService)sp.GetRequiredService<ISchedulerService>());
@@ -138,6 +142,31 @@ try
         return Results.Ok(result);
     });
 
+    // 100% Manual Swapping (Entry 2) Endpoints
+    app.MapGet("/api/manual-swapping/history", (IManualHistoryService history) => Results.Ok(history.GetTopHistory(50)));
+
+    app.MapPost("/api/manual-swapping/execute", async (IManualSwappingService swappingService, ExecuteManualSwappingRequest? req) =>
+    {
+        DateTime fromDate;
+        DateTime toDate;
+
+        if (req != null && !string.IsNullOrEmpty(req.FromDate) && DateTime.TryParse(req.FromDate, out var parsedFrom))
+        {
+            fromDate = parsedFrom;
+            toDate = (req != null && !string.IsNullOrEmpty(req.ToDate) && DateTime.TryParse(req.ToDate, out var parsedTo))
+                ? parsedTo
+                : parsedFrom;
+        }
+        else
+        {
+            fromDate = DateTime.Today;
+            toDate = DateTime.Today;
+        }
+
+        var result = await swappingService.ExecuteSwappingAsync(fromDate, toDate, "Manual Swapping (Entry 2)");
+        return Results.Ok(result);
+    });
+
     Log.Information("✅ KOTA Process Backend Web API is Ready & Listening on http://localhost:{Port}", backendPort);
 
     app.Run();
@@ -153,4 +182,5 @@ finally
 
 public record UpdateSchedulerRequest(string? DailyTime, bool? IsEnabled, List<KotaProcess.Api.Services.ScheduledTimeSlot>? Schedules = null);
 public record RunNowRequest(string? FromDate, string? ToDate, string? TargetDate);
+public record ExecuteManualSwappingRequest(string? FromDate, string? ToDate);
 

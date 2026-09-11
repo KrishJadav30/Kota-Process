@@ -124,7 +124,7 @@ export function DatePicker({
     : placeholder
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${isOpen ? 'z-50' : 'z-10'}`} ref={containerRef}>
       {label && (
         <label className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
           <CalendarIcon className="h-4 w-4 text-blue-600 shrink-0" />
@@ -159,55 +159,55 @@ export function DatePicker({
         <div
           className={`absolute ${
             align === 'right' ? 'right-0' : 'left-0'
-          } top-full mt-2 z-70 w-[280px] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-slate-900/5`}
+          } top-full mt-2 z-[100] w-[340px] sm:w-[365px] bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 sm:p-5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-slate-900/10`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
-            <span className="text-xs sm:text-sm font-bold text-slate-900">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+            <span className="text-sm sm:text-base font-bold text-slate-900">
               {monthNames[viewMonth]} {viewYear}
             </span>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={handleTodayClick}
-                className="px-2 py-0.5 text-2xs font-bold text-blue-600 hover:bg-blue-50 rounded cursor-pointer transition-colors"
+                className="px-2.5 py-1 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
               >
                 Today
               </button>
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
                 title="Previous Month"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4.5 w-4.5" />
               </button>
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
                 title="Next Month"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4.5 w-4.5" />
               </button>
             </div>
           </div>
 
           {/* Weekday labels */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          <div className="grid grid-cols-7 gap-1.5 text-center mb-1.5">
             {weekDays.map((d) => (
-              <div key={d} className="text-2xs font-bold text-slate-400 py-0.5">
+              <div key={d} className="text-xs font-bold text-slate-400 py-0.5">
                 {d}
               </div>
             ))}
           </div>
 
           {/* Day cells matrix */}
-          <div className="grid grid-cols-7 gap-1 text-center">
+          <div className="grid grid-cols-7 gap-1.5 text-center">
             {/* Blank offset */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`blank-${i}`} className="h-7 w-7" />
+              <div key={`blank-${i}`} className="h-9 w-9 sm:h-10 sm:w-10" />
             ))}
 
             {/* Days */}
@@ -230,7 +230,7 @@ export function DatePicker({
                   key={`day-${day}`}
                   type="button"
                   onClick={() => handleSelectDay(day)}
-                  className={`h-7 w-7 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${btnClass}`}
+                  className={`h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl text-xs sm:text-sm transition-colors cursor-pointer ${btnClass}`}
                 >
                   {day}
                 </button>

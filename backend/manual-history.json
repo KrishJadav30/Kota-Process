@@ -1,0 +1,35 @@
+[
+  {
+    "Id": "6edf5a191ee1490f8a22c7da54d0f707",
+    "ProcessDate": "2026-09-11 to 2026-10-31",
+    "ExecutedAt": "2026-09-11T09:31:47.4471172Z",
+    "Status": "Success",
+    "DurationMs": 77,
+    "RowsUpdated": 7,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 03:01:47 PM. Completed in 77ms. Updated 7 rows in MonthTrns using Entry 2 rules.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "3d4308d4d1e441ed8894fd3e8c177fd0",
+    "ProcessDate": "2026-09-01 to 2026-09-30",
+    "ExecutedAt": "2026-09-11T09:30:29.5704223Z",
+    "Status": "Success",
+    "DurationMs": 67,
+    "RowsUpdated": 0,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 03:00:29 PM. Completed in 67ms. Updated 0 rows in MonthTrns using Entry 2 rules.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "1ce47d5f6fd047dd9a6b404cfcedd784",
+    "ProcessDate": "2026-09-11",
+    "ExecutedAt": "2026-09-11T09:29:07.1941022Z",
+    "Status": "Success",
+    "DurationMs": 350,
+    "RowsUpdated": 0,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 02:59:07 PM. Completed in 350ms. Updated 0 rows in MonthTrns using Entry 2 rules.",
+    "ErrorMessage": null
+  }
+]

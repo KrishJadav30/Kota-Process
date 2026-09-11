@@ -211,6 +211,14 @@ export function AutoProcessPage() {
     setToDate(formatLocalDate(lastDay))
   }
 
+  const handlePresetPrevMonth = () => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+    setFromDate(formatLocalDate(firstDay))
+    setToDate(formatLocalDate(lastDay))
+  }
+
   const handleExecuteRange = async () => {
     if (!fromDate || !toDate) return
     setIsRunningNow(true)
@@ -298,28 +306,33 @@ export function AutoProcessPage() {
     <div className="space-y-6 w-full">
       {/* Page Title Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-          Auto Process
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Auto Process
+          </h1>
+          <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 text-blue-700 border-blue-300 bg-blue-50">
+            Entry 4 Rule
+          </Badge>
+        </div>
         <p className="text-slate-600 text-sm sm:text-base font-normal mt-1">
-          Set the daily time to automatically run the process in the background.
+          Set the daily time to automatically run the process in the background. In this automated process, employee entry is considered as 4 (Entry 4) to automatically process attendance data.
         </p>
       </div>
 
       {/* 1. Automated Shift Schedules Box (Multi-Time + Night Shift 2-Day Support) */}
       <Card className="border border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden w-full">
         <CardHeader className="p-5 pb-4 border-b border-slate-100">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
               <div className="h-10 w-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold shadow-2xs shrink-0">
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
                     Automated Shift Schedules
                   </CardTitle>
-                  <Badge variant="outline" className="text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                  <Badge variant="outline" className="text-xs font-semibold bg-blue-50 text-blue-700 border-blue-200 shrink-0">
                     {schedules.filter(s => s.isEnabled).length} / 4 Active Shifts
                   </Badge>
                 </div>
@@ -329,34 +342,35 @@ export function AutoProcessPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+            {/* Right Action Controls: Clean side-by-side single row alignment */}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap justify-start xl:justify-end shrink-0">
               {scheduler?.nextRunTime && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200/80 text-blue-900 text-xs sm:text-sm font-semibold">
-                  <span className="text-slate-500 font-normal">Next Upcoming:</span>
-                  <span className="font-bold text-blue-800">{formatNextRun(scheduler.nextRunTime)}</span>
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/90 text-blue-950 text-xs sm:text-sm font-semibold whitespace-nowrap shadow-2xs">
+                  <span className="text-slate-500 font-medium">Next Upcoming:</span>
+                  <span className="font-bold text-blue-900">{formatNextRun(scheduler.nextRunTime)}</span>
                   {scheduler.nextRunLabel && (
-                    <span className="text-blue-600 font-medium">({scheduler.nextRunLabel})</span>
+                    <span className="text-blue-700 font-semibold">({scheduler.nextRunLabel})</span>
                   )}
                   {scheduler.nextRunIsNightShift && (
-                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-2xs font-bold uppercase tracking-wider">
-                      🌙 2-Day (Yesterday & Today)
+                    <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-2xs font-bold uppercase tracking-wider">
+                      🌙 2-Day
                     </span>
                   )}
                 </div>
               )}
 
-              <Button
+              <button
+                type="button"
                 onClick={() => {
                   setRunMessage(null)
                   setIsRunModalOpen(true)
                 }}
                 disabled={scheduler?.isExecuting}
-                variant="outline"
-                className="h-10 px-4 border border-emerald-600 bg-white hover:bg-emerald-50 text-emerald-700 font-semibold text-xs sm:text-sm rounded-lg shadow-2xs flex items-center gap-2 cursor-pointer transition-all"
+                className="h-10 px-4.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-2 cursor-pointer transition-all border border-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
               >
-                <Play className="h-4 w-4 text-emerald-600 fill-emerald-600" />
+                <Play className="h-4 w-4 text-white fill-white shrink-0" />
                 <span>Run Process Now</span>
-              </Button>
+              </button>
             </div>
           </div>
         </CardHeader>
@@ -537,7 +551,15 @@ export function AutoProcessPage() {
                     disabled={isRunningNow}
                     className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg border border-blue-200 bg-blue-50/90 hover:bg-blue-100 text-blue-800 cursor-pointer transition-colors"
                   >
-                    This Month (1 to {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()})
+                    This Month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePresetPrevMonth}
+                    disabled={isRunningNow}
+                    className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg border border-purple-200 bg-purple-50/90 hover:bg-purple-100 text-purple-800 cursor-pointer transition-colors"
+                  >
+                    Previous Month
                   </button>
                 </div>
               </div>
