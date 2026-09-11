@@ -5,6 +5,11 @@
   --font-mono: 'JetBrains Mono', Consolas, monospace;
 }
 
+.text-2xs {
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
 :root {
   --background: #f1f5f9;
   --foreground: #0f172a;

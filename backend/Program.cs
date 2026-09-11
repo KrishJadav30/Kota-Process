@@ -68,6 +68,9 @@ try
     builder.Services.AddSingleton<IManualHistoryService, ManualHistoryService>();
     builder.Services.AddScoped<IManualSwappingService, ManualSwappingService>();
 
+    // Register User Authentication & Security Service
+    builder.Services.AddSingleton<IAuthService, AuthService>();
+
     // Register Autonomous 24/7 Scheduler Service (Runs independently in background)
     builder.Services.AddSingleton<ISchedulerService, SchedulerService>();
     builder.Services.AddHostedService(sp => (SchedulerService)sp.GetRequiredService<ISchedulerService>());
@@ -167,6 +170,46 @@ try
         return Results.Ok(result);
     });
 
+    // Authentication Endpoints
+    app.MapPost("/api/auth/login", async (IAuthService authService, HttpContext ctx, LoginRequest req) =>
+    {
+        var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        var (success, token, user, error) = await authService.AuthenticateAsync(req.Email ?? "", req.Password ?? "", ip);
+        if (!success || user == null || string.IsNullOrEmpty(token))
+        {
+            return Results.Json(new { success = false, message = error ?? "Invalid email or password." }, statusCode: 401);
+        }
+        return Results.Ok(new
+        {
+            success = true,
+            token,
+            user = new { email = user.Email, name = user.Name }
+        });
+    });
+
+    app.MapPost("/api/auth/logout", (IAuthService authService, HttpContext ctx, LogoutRequest? req) =>
+    {
+        var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        authService.LogLogout(req?.Email ?? "", ip);
+        return Results.Ok(new { success = true, message = "Logged out successfully." });
+    });
+
+    app.MapGet("/api/auth/me", (IAuthService authService, HttpContext ctx) =>
+    {
+        var authHeader = ctx.Request.Headers["Authorization"].FirstOrDefault();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.Unauthorized();
+        }
+        var token = authHeader.Substring("Bearer ".Length).Trim();
+        var user = authService.ValidateToken(token);
+        if (user == null)
+        {
+            return Results.Unauthorized();
+        }
+        return Results.Ok(new { email = user.Email, name = user.Name });
+    });
+
     Log.Information("✅ KOTA Process Backend Web API is Ready & Listening on http://localhost:{Port}", backendPort);
 
     app.Run();
@@ -183,4 +226,6 @@ finally
 public record UpdateSchedulerRequest(string? DailyTime, bool? IsEnabled, List<KotaProcess.Api.Services.ScheduledTimeSlot>? Schedules = null);
 public record RunNowRequest(string? FromDate, string? ToDate, string? TargetDate);
 public record ExecuteManualSwappingRequest(string? FromDate, string? ToDate);
+public record LoginRequest(string? Email, string? Password);
+public record LogoutRequest(string? Email);
 

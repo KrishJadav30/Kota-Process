@@ -5,11 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatLocalDate, parseLocalDate } from '@/lib/utils'
 import { api, type SchedulerStatusDto, type ProcessHistoryItem, type ScheduledTimeSlot } from '@/api'
-import { Clock, Save, CheckCircle2, Play, RefreshCw, X, Calendar, ArrowRight, Timer, AlertCircle } from 'lucide-react'
+import { Clock, Save, CheckCircle2, Play, RefreshCw, X, Calendar, ArrowRight, Timer, AlertCircle, Bot, User } from 'lucide-react'
 
 export function AutoProcessPage() {
   const [scheduler, setScheduler] = useState<SchedulerStatusDto | null>(null)
   const [history, setHistory] = useState<ProcessHistoryItem[]>([])
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'automated' | 'manual'>('all')
   const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>([
     { id: 'shift-1', label: 'Night Shift', time: '06:00', isEnabled: true, isNightShift: true },
     { id: 'shift-2', label: 'Morning Shift', time: '12:00', isEnabled: true, isNightShift: false },
@@ -27,6 +28,12 @@ export function AutoProcessPage() {
   const [fromDate, setFromDate] = useState<string>(() => formatLocalDate(new Date()))
   const [toDate, setToDate] = useState<string>(() => formatLocalDate(new Date()))
   const [runMessage, setRunMessage] = useState<string | null>(null)
+
+  const isAutomatedTrigger = (trigger?: string) => {
+    if (!trigger) return false
+    const lower = trigger.toLowerCase()
+    return lower.includes('autonomous') || lower.includes('schedule') || lower.includes('auto')
+  }
 
   const loadHistory = useCallback(async () => {
     try {
@@ -647,10 +654,10 @@ export function AutoProcessPage() {
         </div>
       )}
 
-      {/* 2. Top 50 Execution Logs Table */}
+      {/* 2. Top 50 Execution Logs Table with Differentiated Colors for Manual vs Automated */}
       <Card className="border border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden w-full">
         <CardHeader className="p-4 sm:p-5 pb-3.5 border-b border-slate-200 bg-slate-50/60">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
             <div>
               <div className="flex items-center gap-2.5">
                 <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
@@ -665,16 +672,57 @@ export function AutoProcessPage() {
               </CardDescription>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadHistory}
-              disabled={isRefreshingHistory}
-              className="self-start sm:self-auto h-9 px-3.5 text-xs sm:text-sm font-semibold border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer flex items-center gap-1.5"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshingHistory ? 'animate-spin text-blue-600' : ''}`} />
-              <span>Refresh Logs</span>
-            </Button>
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+              {/* Color Differentiated Filter / Legend */}
+              <div className="inline-flex items-center p-1 bg-slate-200/80 rounded-lg text-xs font-semibold shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    historyFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({history.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('automated')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    historyFilter === 'automated'
+                      ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                      : 'text-blue-700 hover:text-blue-900'
+                  }`}
+                >
+                  <Bot className="h-3.5 w-3.5" />
+                  <span>Automated ({history.filter(h => isAutomatedTrigger(h.triggerSource)).length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('manual')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    historyFilter === 'manual'
+                      ? 'bg-amber-600 text-white shadow-2xs font-bold'
+                      : 'text-amber-800 hover:text-amber-950'
+                  }`}
+                >
+                  <User className="h-3.5 w-3.5" />
+                  <span>Manual ({history.filter(h => !isAutomatedTrigger(h.triggerSource)).length})</span>
+                </button>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadHistory}
+                disabled={isRefreshingHistory}
+                className="self-start sm:self-auto h-9 px-3.5 text-xs sm:text-sm font-semibold border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer flex items-center gap-1.5"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshingHistory ? 'animate-spin text-blue-600' : ''}`} />
+                <span>Refresh Logs</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
@@ -687,113 +735,189 @@ export function AutoProcessPage() {
                 Once the scheduled daily time is reached or you click "Run Process Now", execution records will appear here.
               </p>
             </div>
-          ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm table-auto">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200">
-                    <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Date Processed</th>
-                    <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Run Timestamp</th>
-                    <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">Status</th>
-                    <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-right w-[95px]">Duration</th>
-                    <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">MonthTrns Records</th>
-                    <th className="py-3.5 px-3 sm:px-4 w-[270px]">Trigger</th>
-                    <th className="py-3.5 px-3 sm:px-4 w-[320px] max-w-[360px]">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white font-normal">
-                  {history.map((item) => {
-                    const isSuccess = item.status === 'Success'
-                    return (
-                      <tr
-                        key={item.id}
-                        className="divide-x divide-slate-200 hover:bg-blue-50/30 transition-colors"
-                      >
-                        {/* Process Date */}
-                        <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 whitespace-nowrap text-sm w-[170px]">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
-                            <span>{item.processDate}</span>
-                          </div>
-                        </td>
+          ) : (() => {
+            const automatedCount = history.filter(h => isAutomatedTrigger(h.triggerSource)).length
+            const manualCount = history.length - automatedCount
+            const filteredHistory = history.filter(item => {
+              if (historyFilter === 'automated') return isAutomatedTrigger(item.triggerSource)
+              if (historyFilter === 'manual') return !isAutomatedTrigger(item.triggerSource)
+              return true
+            })
 
-                        {/* Run Timestamp */}
-                        <td className="py-3.5 px-3 sm:px-4 text-slate-700 whitespace-nowrap font-medium text-sm w-[170px]">
-                          {formatDateTime(item.executedAt)}
-                        </td>
-
-                        {/* Status Badge */}
-                        <td className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">
-                          <span
-                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
-                              isSuccess
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
-                            }`}
+            return (
+              <div className="w-full overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm table-auto">
+                  <thead className="border-l-4 border-l-transparent">
+                    <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200">
+                      <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Date Processed</th>
+                      <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Run Timestamp</th>
+                      <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">Status</th>
+                      <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-right w-[95px]">Duration</th>
+                      <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">MonthTrns Records</th>
+                      <th className="py-3.5 px-3 sm:px-4 w-[280px]">Trigger Type</th>
+                      <th className="py-3.5 px-3 sm:px-4 w-[310px] max-w-[360px]">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white font-normal">
+                    {filteredHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-10 text-center text-slate-500">
+                          <p className="text-sm font-semibold">No records found for the "{historyFilter}" filter</p>
+                          <button
+                            type="button"
+                            onClick={() => setHistoryFilter('all')}
+                            className="mt-2 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
                           >
-                            {isSuccess ? 'Success' : 'Failed'}
-                            <span className="text-2xs">{isSuccess ? '✓' : '✕'}</span>
-                          </span>
-                        </td>
-
-                        {/* Duration */}
-                        <td className="py-3.5 px-2.5 sm:px-3 text-slate-800 whitespace-nowrap text-right text-sm font-semibold w-[95px]">
-                          <span>{item.durationMs.toLocaleString()}</span> <span className="text-slate-500 font-normal text-sm">ms</span>
-                        </td>
-
-                        {/* Rows Processed */}
-                        <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">
-                          <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
-                            <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">
-                              {item.rowsUpdated} updated
-                            </span>
-                            <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
-                              {item.rowsInserted} inserted
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Trigger Source */}
-                        <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[270px]">
-                          <div className="text-sm font-medium px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 leading-snug whitespace-normal break-normal">
-                            {item.triggerSource}
-                          </div>
-                        </td>
-
-                        {/* Message / Details (decreased width) */}
-                        <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[320px] max-w-[360px]">
-                          {isSuccess ? (
-                            <div className="flex items-center gap-2 text-slate-700 text-sm font-normal">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 self-start sm:self-center mt-0.5 sm:mt-0" />
-                              <span className="leading-normal">{item.message}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-start gap-2 text-rose-700 font-medium text-sm leading-snug break-words">
-                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
-                              <span className="break-words" title={item.errorMessage || item.message}>
-                                {item.errorMessage || item.message}
-                              </span>
-                            </div>
-                          )}
+                            Show all records
+                          </button>
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredHistory.map((item) => {
+                        const isSuccess = item.status === 'Success'
+                        const isAuto = isAutomatedTrigger(item.triggerSource)
 
-              {/* Table Footer Status */}
-              <div className="py-3.5 px-4 sm:px-5 border-t border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm text-slate-600 font-medium">
-                <span>
-                  Showing {history.length} execution record{history.length === 1 ? '' : 's'}
-                </span>
-                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Autonomous 24/7 background scheduler active
-                </span>
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`divide-x divide-slate-200 transition-colors ${
+                              isAuto
+                                ? 'border-l-4 border-l-blue-600 bg-blue-50/15 hover:bg-blue-50/40'
+                                : 'border-l-4 border-l-amber-500 bg-amber-50/15 hover:bg-amber-50/40'
+                            }`}
+                          >
+                            {/* Process Date */}
+                            <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 whitespace-nowrap text-sm w-[170px]">
+                              <div className="flex items-center gap-1.5">
+                                {isAuto ? (
+                                  <Clock className="h-4 w-4 text-blue-600 shrink-0" />
+                                ) : (
+                                  <Calendar className="h-4 w-4 text-amber-600 shrink-0" />
+                                )}
+                                <span>{item.processDate}</span>
+                              </div>
+                            </td>
+
+                            {/* Run Timestamp */}
+                            <td className="py-3.5 px-3 sm:px-4 text-slate-700 whitespace-nowrap font-medium text-sm w-[170px]">
+                              {formatDateTime(item.executedAt)}
+                            </td>
+
+                            {/* Status Badge */}
+                            <td className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">
+                              <span
+                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                                  isSuccess
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}
+                              >
+                                {isSuccess ? 'Success' : 'Failed'}
+                                <span className="text-2xs">{isSuccess ? '✓' : '✕'}</span>
+                              </span>
+                            </td>
+
+                            {/* Duration */}
+                            <td className="py-3.5 px-2.5 sm:px-3 text-slate-800 whitespace-nowrap text-right text-sm font-semibold w-[95px]">
+                              <span>{item.durationMs.toLocaleString()}</span> <span className="text-slate-500 font-normal text-sm">ms</span>
+                            </td>
+
+                            {/* Rows Processed */}
+                            <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">
+                              <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-md font-semibold border ${
+                                    isAuto
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                                  }`}
+                                >
+                                  {item.rowsUpdated} updated
+                                </span>
+                                <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                                  {item.rowsInserted} inserted
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Trigger Source - Differentiated with Colors & Icons */}
+                            <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[280px]">
+                              {isAuto ? (
+                                <div className="p-2 rounded-lg bg-blue-50/90 border border-blue-200/90 text-blue-950 flex flex-col gap-1 shadow-2xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider bg-blue-600 text-white shadow-2xs">
+                                      <Bot className="h-3 w-3" />
+                                      Automated
+                                    </span>
+                                    <span className="text-2xs font-semibold text-blue-700">Daily Schedule</span>
+                                  </div>
+                                  <div className="text-xs font-semibold text-blue-900 leading-snug break-words">
+                                    {item.triggerSource}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200/90 text-amber-950 flex flex-col gap-1 shadow-2xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider bg-amber-600 text-white shadow-2xs">
+                                      <User className="h-3 w-3" />
+                                      Manual Run
+                                    </span>
+                                    <span className="text-2xs font-semibold text-amber-800">On-Demand</span>
+                                  </div>
+                                  <div className="text-xs font-semibold text-amber-900 leading-snug break-words">
+                                    {item.triggerSource}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Message / Details */}
+                            <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[310px] max-w-[360px]">
+                              {isSuccess ? (
+                                <div className="flex items-center gap-2 text-slate-700 text-sm font-normal">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 self-start sm:self-center mt-0.5 sm:mt-0" />
+                                  <span className="leading-normal">{item.message}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-start gap-2 text-rose-700 font-medium text-sm leading-snug break-words">
+                                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                                  <span className="break-words" title={item.errorMessage || item.message}>
+                                    {item.errorMessage || item.message}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Table Footer Status */}
+                <div className="py-3.5 px-4 sm:px-5 border-t border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs sm:text-sm text-slate-600 font-medium">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span>
+                      Showing {filteredHistory.length} of {history.length} execution record{history.length === 1 ? '' : 's'}
+                    </span>
+                    <span className="text-slate-300">|</span>
+                    <span className="inline-flex items-center gap-1.5 text-blue-700 font-semibold">
+                      <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+                      {automatedCount} Automated
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 text-amber-700 font-semibold">
+                      <span className="h-2 w-2 rounded-full bg-amber-600"></span>
+                      {manualCount} Manual
+                    </span>
+                  </div>
+                  <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Autonomous 24/7 background scheduler active
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </CardContent>
       </Card>
     </div>

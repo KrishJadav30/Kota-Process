@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatLocalDate, parseLocalDate } from '@/lib/utils'
 import { api, type ManualHistoryItem } from '@/api'
-import { ArrowLeftRight, Database, Play, RefreshCw, Calendar, ArrowRight, CheckCircle2, AlertCircle, Timer } from 'lucide-react'
+import { ArrowLeftRight, Database, Play, RefreshCw, Calendar, ArrowRight, CheckCircle2, AlertCircle, Timer, User } from 'lucide-react'
 
 export function ManualSwappingPage() {
   const [history, setHistory] = useState<ManualHistoryItem[]>([])
@@ -431,13 +431,13 @@ export function ManualSwappingPage() {
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm table-auto">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200">
+                  <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200 border-l-4 border-l-transparent">
                     <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Date Processed</th>
                     <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px]">Run Timestamp</th>
                     <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">Status</th>
                     <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-right w-[95px]">Duration</th>
                     <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">MonthTrns Records</th>
-                    <th className="py-3.5 px-3 sm:px-4 w-[270px]">Trigger</th>
+                    <th className="py-3.5 px-3 sm:px-4 w-[270px]">Trigger Type</th>
                     <th className="py-3.5 px-3 sm:px-4 w-[320px] max-w-[360px]">Details</th>
                   </tr>
                 </thead>
@@ -447,12 +447,12 @@ export function ManualSwappingPage() {
                     return (
                       <tr
                         key={item.id}
-                        className="divide-x divide-slate-200 hover:bg-indigo-50/30 transition-colors"
+                        className="divide-x divide-slate-200 border-l-4 border-l-amber-500 bg-amber-50/15 hover:bg-amber-50/40 transition-colors"
                       >
                         {/* Process Date */}
                         <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 whitespace-nowrap text-sm w-[170px]">
                           <div className="flex items-center gap-1.5">
-                            <Calendar className="h-4 w-4 text-indigo-600 shrink-0" />
+                            <Calendar className="h-4 w-4 text-amber-600 shrink-0" />
                             <span>{item.processDate}</span>
                           </div>
                         </td>
@@ -483,15 +483,24 @@ export function ManualSwappingPage() {
 
                         {/* Rows Processed */}
                         <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">
-                          <span className="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 text-xs sm:text-sm">
+                          <span className="px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 font-semibold border border-amber-200 text-xs sm:text-sm">
                             {item.rowsUpdated.toLocaleString()} updated
                           </span>
                         </td>
 
                         {/* Trigger Source */}
                         <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[270px]">
-                          <div className="text-sm font-medium px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 leading-snug whitespace-normal break-normal">
-                            {item.triggerSource}
+                          <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200/90 text-amber-950 flex flex-col gap-1 shadow-2xs">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider bg-amber-600 text-white shadow-2xs">
+                                <User className="h-3 w-3" />
+                                Manual Run
+                              </span>
+                              <span className="text-2xs font-semibold text-amber-800">Entry 2 Rule</span>
+                            </div>
+                            <div className="text-xs font-semibold text-amber-900 leading-snug break-words">
+                              {item.triggerSource}
+                            </div>
                           </div>
                         </td>
 

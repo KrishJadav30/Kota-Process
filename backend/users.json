@@ -1,0 +1,12 @@
+[
+  {
+    "email": "print@electronics.com",
+    "name": "Print Electronics",
+    "passwordHash": "$2b$10$sWre8B8GvaziExeP23g7RudGT6g2Xh1thDFTPF94sfXP2r6PHSs2S"
+  },
+  {
+    "email": "tko@user.com",
+    "name": "TKO User",
+    "passwordHash": "$2b$10$bCrPn37molbdxPlnT0PJPu.OzxhATA0nK4cJnj7tBV9R736fC82PW"
+  }
+]

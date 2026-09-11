@@ -3,6 +3,8 @@ import { Navbar, type PageId } from '@/components/Navbar'
 import { HomePage } from '@/pages/HomePage'
 import { AutoProcessPage } from '@/pages/AutoProcessPage'
 import { ManualSwappingPage } from '@/pages/ManualSwappingPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { getAuthUser, api, type UserProfile } from '@/api'
 
 const getInitialPage = (): PageId => {
   // 1. Check window pathname first
@@ -25,6 +27,7 @@ const getInitialPage = (): PageId => {
 }
 
 export function App() {
+  const [user, setUser] = useState<UserProfile | null>(getAuthUser)
   const [currentPage, setCurrentPage] = useState<PageId>(getInitialPage)
 
   const handleSelectPage = useCallback((page: PageId) => {
@@ -40,8 +43,16 @@ export function App() {
     }
   }, [])
 
+  const handleLogout = useCallback(async () => {
+    await api.logout(user?.email)
+    setUser(null)
+    setCurrentPage('home')
+  }, [user])
+
   // Sync with browser Back/Forward navigation
   useEffect(() => {
+    if (!user) return
+
     const handlePopState = () => {
       const page = getInitialPage()
       setCurrentPage(page)
@@ -61,12 +72,22 @@ export function App() {
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [currentPage])
+  }, [currentPage, user])
+
+  // If user is not authenticated, render Login Page
+  if (!user) {
+    return <LoginPage onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-950 font-sans flex flex-col">
-      {/* Top Navigation Bar */}
-      <Navbar currentPage={currentPage} onSelectPage={handleSelectPage} />
+      {/* Top Navigation Bar with User info and Logout */}
+      <Navbar
+        currentPage={currentPage}
+        onSelectPage={handleSelectPage}
+        user={user}
+        onLogout={handleLogout}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-30 sm:pt-36 pb-24 sm:pb-32">
@@ -85,6 +106,7 @@ export function App() {
 }
 
 export default App
+
 
 
 
