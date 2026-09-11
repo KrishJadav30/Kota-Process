@@ -12,7 +12,7 @@ if (!Directory.Exists(logsDir))
 }
 
 // Configure Serilog with dynamic monthly file rotation for any month and any year
-// Format: {MonthName}_{Year}_logs.log (e.g. July_2026_logs.log, August_2026_logs.log, etc.)
+// Format: {MonthName}_{Year}_logs.log (e.g. September_2026_logs.log)
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .Enrich.FromLogContext()

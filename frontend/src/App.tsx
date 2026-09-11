@@ -173,7 +173,6 @@ export function App() {
                       <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
                         Active Monthly Log File
                       </span>
-                      {/* Crisp, non-blurry log file path with high contrast chip */}
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-bold text-slate-600">root/logs/</span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-300 text-blue-900 font-extrabold text-sm shadow-2xs tracking-tight">
@@ -189,26 +188,13 @@ export function App() {
 
                 <div className="pt-2.5 border-t border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-800 font-medium">
                   <span>
-                    <strong>On-Demand Creation:</strong> Next month's file will be automatically generated when that month arrives.
+                    <strong>On-Demand Creation:</strong> Monthly file generated dynamically when active.
                   </span>
                   <Badge variant="outline" className="text-xs font-bold text-slate-950 self-start sm:self-auto">
                     {existingLogs.length} File on Disk
                   </Badge>
                 </div>
               </div>
-            </div>
-
-            {/* Ready Callout Banner */}
-            <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-400 text-center space-y-1">
-              <p className="text-base sm:text-lg font-black text-blue-950">
-                ☀️ Crisp Typography Initialized with Inter
-              </p>
-              <p className="text-sm text-blue-900 font-bold">
-                Razor-sharp rendering, high-contrast badges, and dynamic .env connections ready.
-              </p>
-              <p className="text-xs text-slate-700 font-semibold pt-1">
-                Tell me what features or UI you want to add next, and we will build them step by step!
-              </p>
             </div>
           </CardContent>
         </Card>

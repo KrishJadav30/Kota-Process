@@ -58,7 +58,7 @@ public class LogService : ILogService
 
         return Directory.GetFiles(_envService.LogsDirectory, "*_logs.log")
             .Select(Path.GetFileName)
-            .Where(name => !string.IsNullOrEmpty(name))!
+            .OfType<string>()
             .OrderByDescending(name => name);
     }
 }
