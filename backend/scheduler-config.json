@@ -11,25 +11,25 @@
       "Id": "shift-2",
       "Label": "Morning Shift",
       "Time": "12:00",
-      "IsEnabled": true,
+      "IsEnabled": false,
       "IsNightShift": false
     },
     {
       "Id": "shift-3",
       "Label": "Evening Shift",
       "Time": "18:00",
-      "IsEnabled": true,
+      "IsEnabled": false,
       "IsNightShift": false
     },
     {
       "Id": "shift-4",
       "Label": "Midnight Shift",
       "Time": "00:00",
-      "IsEnabled": true,
+      "IsEnabled": false,
       "IsNightShift": true
     }
   ],
   "DailyTime": "06:00",
   "IsEnabled": true,
-  "LastUpdated": "2026-09-11T09:39:25.6195419Z"
+  "LastUpdated": "2026-09-11T10:38:52.4956881Z"
 }
