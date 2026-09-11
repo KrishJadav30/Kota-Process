@@ -1,0 +1,36 @@
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# .NET / C# build artifacts
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Tt]emp/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+*.ide/
+.vs/
+.vscode/
+
+# Node / Frontend artifacts
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+.vite/
+
+# System / OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs (keep folder via .gitkeep, ignore runtime log files)
+logs/*.log
+!logs/.gitkeep

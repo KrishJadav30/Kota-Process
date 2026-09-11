@@ -1,0 +1,53 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  backend-build:
+    name: ⚙️ Build & Verify .NET Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+            9.0.x
+          dotnet-quality: 'preview'
+
+      - name: 📦 Restore Backend Dependencies
+        run: dotnet restore backend/KotaProcess.Api.csproj
+
+      - name: 🚀 Build Backend
+        run: dotnet build backend/KotaProcess.Api.csproj --configuration Release --no-restore
+
+  frontend-build:
+    name: 💻 Build & Verify React Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install Frontend Dependencies
+        run: npm ci
+
+      - name: 🚀 Build Frontend
+        run: npm run build
