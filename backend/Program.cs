@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Globalization;
 using KotaProcess.Api.Services;
+using Microsoft.Data.SqlClient;
 using Serilog;
+using Serilog.Events;
 
 // Load early configuration from root .env
 var (backendPort, logsDir, envPath) = EnvService.LoadEarlyConfig();
@@ -11,10 +14,20 @@ if (!Directory.Exists(logsDir))
     Directory.CreateDirectory(logsDir);
 }
 
-// Configure Serilog with dynamic monthly file rotation for any month and any year
-// Format: {MonthName}_{Year}_logs.log (e.g. September_2026_logs.log)
+// Configure Serilog with clean level overrides to eliminate framework noise
+// and keep only meaningful business events and clear errors.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
+    // Suppress verbose ASP.NET Core & System framework internal messages
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting.Diagnostics", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Routing", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Cors", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Mvc", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .MinimumLevel.Override("System.Net.Http", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.Map(
@@ -79,16 +92,98 @@ try
 
     app.UseCors("AllowAll");
 
-    // Force no-cache on all /api endpoints so browsers and proxies always receive latest data
+    // Clean HTTP Request and Global Error Handling Middleware
     app.Use(async (context, next) =>
     {
-        if (context.Request.Path.StartsWithSegments("/api"))
+        var sw = Stopwatch.StartNew();
+        var path = context.Request.Path.Value ?? "";
+        var method = context.Request.Method;
+        var isApi = path.StartsWith("/api", StringComparison.OrdinalIgnoreCase);
+
+        // Force no-cache on all /api endpoints
+        if (isApi)
         {
             context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate, max-age=0";
             context.Response.Headers.Pragma = "no-cache";
             context.Response.Headers.Expires = "-1";
         }
-        await next();
+
+        try
+        {
+            await next();
+            sw.Stop();
+
+            var statusCode = context.Response.StatusCode;
+
+            // Only log if it's an error (>= 400) OR an operational action (POST/PUT/DELETE)
+            // Routine background polling like GET /api/scheduler/config, GET /api/scheduler/history stay silent and clean
+            if (statusCode >= 400)
+            {
+                var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                if (statusCode == 401)
+                {
+                    Log.Warning("⚠️ [HTTP 401] Unauthorized access: {Method} {Path} from {Ip} ({Duration}ms)",
+                        method, path, clientIp, sw.ElapsedMilliseconds);
+                }
+                else if (statusCode == 404)
+                {
+                    Log.Warning("⚠️ [HTTP 404] Endpoint not found: {Method} {Path} ({Duration}ms)",
+                        method, path, sw.ElapsedMilliseconds);
+                }
+                else
+                {
+                    Log.Warning("⚠️ [HTTP {StatusCode}] {Method} {Path} returned warning from {Ip} ({Duration}ms)",
+                        statusCode, method, path, clientIp, sw.ElapsedMilliseconds);
+                }
+            }
+            else if (isApi && method != "GET")
+            {
+                // Clean single-line logging for operational actions
+                Log.Information("🌐 [API] {Method} {Path} -> {StatusCode} ({Duration}ms)",
+                    method, path, statusCode, sw.ElapsedMilliseconds);
+            }
+        }
+        catch (BadHttpRequestException badEx)
+        {
+            sw.Stop();
+            var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            Log.Warning("⚠️ [BAD REQUEST] {Method} {Path} from {Ip}:\n   💡 Reason: {Message}",
+                method, path, clientIp, badEx.Message);
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = 400;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { success = false, message = "Invalid JSON or request payload." });
+            }
+        }
+        catch (SqlException sqlEx)
+        {
+            sw.Stop();
+            Log.Error("❌ [DATABASE ERROR] SQL Error #{Number} during {Method} {Path}:\n   💡 Reason: {Message}\n   📍 Server: {Server}",
+                sqlEx.Number, method, path, sqlEx.Message, sqlEx.Server);
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = 500;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { success = false, message = $"Database operation failed: {sqlEx.Message}" });
+            }
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            var topFrame = ex.StackTrace?.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Unknown";
+            Log.Error("❌ [SERVER ERROR] Unhandled exception during {Method} {Path}:\n   💡 Reason: {Message}\n   📍 Type: {Type}\n   🔍 Code: {Frame}",
+                method, path, ex.Message, ex.GetType().Name, topFrame);
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = 500;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { success = false, message = $"Internal server error: {ex.Message}" });
+            }
+        }
     });
 
     // Clean API Endpoints

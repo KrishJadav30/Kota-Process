@@ -36,7 +36,8 @@ public class AuthService : IAuthService
         _envService = envService;
         _logger = logger;
         _usersFilePath = Path.Combine(GetBackendDirectory(), "users.json");
-        LoadUsers();
+        LoadUsers(isReload: false);
+        _logger.LogInformation("👥 [AUTH] Initialized with {Count} authorized user account(s) from users.json", _users.Count);
     }
 
     private static string GetBackendDirectory()
@@ -71,7 +72,7 @@ public class AuthService : IAuthService
                 var writeTime = File.GetLastWriteTimeUtc(_usersFilePath);
                 if (writeTime > _lastLoadedWriteTimeUtc)
                 {
-                    LoadUsers();
+                    LoadUsers(isReload: true);
                 }
             }
         }
@@ -81,7 +82,7 @@ public class AuthService : IAuthService
         }
     }
 
-    private void LoadUsers()
+    private void LoadUsers(bool isReload)
     {
         lock (_lock)
         {
@@ -95,14 +96,17 @@ public class AuthService : IAuthService
                     if (list != null)
                     {
                         _users = list;
-                        _logger.LogInformation("👥 Loaded {Count} authorized user account(s) from users.json", _users.Count);
+                        if (isReload)
+                        {
+                            _logger.LogInformation("👥 [AUTH] Reloaded {Count} user account(s) from users.json", _users.Count);
+                        }
                         return;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning("⚠️ Could not read users.json file: {Message}", ex.Message);
+                _logger.LogWarning("⚠️ [AUTH] Could not read users.json file: {Message}", ex.Message);
             }
 
             // Fallback default
