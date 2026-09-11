@@ -60,49 +60,42 @@ try
     builder.Services.AddSingleton<ILogService, LogService>();
     builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 
+    // Register Autonomous 24/7 Scheduler Service (Runs independently in background)
+    builder.Services.AddSingleton<ISchedulerService, SchedulerService>();
+    builder.Services.AddHostedService(sp => (SchedulerService)sp.GetRequiredService<ISchedulerService>());
+
     var app = builder.Build();
 
     app.UseCors("AllowAll");
 
-    // 🌟 Clean API Endpoints:
-
-    // 1. Overall Status Endpoint (Includes current month log file)
-    app.MapGet("/api/status", (IEnvService env, ILogService logService) => Results.Ok(new
+    // Clean API Endpoints
+    app.MapGet("/", () => Results.Ok(new
     {
-        status = "Ready ✅",
-        frontendPort = env.FrontendPort,
-        backendPort = env.BackendPort,
-        dbServer = env.DbServer,
-        dbDatabase = env.DbDatabase,
-        logsDir = env.LogsDirectory,
-        currentLogFile = logService.GetCurrentLogFileName(),
+        message = "KOTA Process Web API",
+        status = "Healthy",
         timestamp = DateTime.UtcNow
     }));
 
-    // 2. Database Connection Check Endpoint
-    app.MapGet("/api/db-check", async (IDatabaseService dbService) =>
+    app.MapGet("/api/health", () => Results.Ok(new
     {
-        var result = await dbService.CheckConnectionAsync();
+        status = "Healthy",
+        timestamp = DateTime.UtcNow
+    }));
+
+    // Scheduler Endpoints
+    app.MapGet("/api/scheduler/config", (ISchedulerService scheduler) => Results.Ok(scheduler.GetStatus()));
+
+    app.MapPost("/api/scheduler/config", async (ISchedulerService scheduler, UpdateSchedulerRequest req) =>
+    {
+        var result = await scheduler.UpdateConfigAsync(req.DailyTime, req.IsEnabled ?? true);
         return Results.Ok(result);
     });
 
-    // 3. Existing Log Files Endpoint (Only files that actually exist, no future files)
-    app.MapGet("/api/logs/files", (ILogService logService) =>
+    app.MapPost("/api/scheduler/run-now", async (ISchedulerService scheduler) =>
     {
-        return Results.Ok(new
-        {
-            currentLogFile = logService.GetCurrentLogFileName(),
-            existingFiles = logService.GetExistingLogFiles().ToList()
-        });
+        var result = await scheduler.TriggerRunNowAsync();
+        return Results.Ok(result);
     });
-
-    // 4. Root Welcome Check
-    app.MapGet("/", () => Results.Ok(new
-    {
-        message = "🚀 KOTA Process Web API is running!",
-        status = "Ready for instructions ✅",
-        timestamp = DateTime.UtcNow
-    }));
 
     Log.Information("✅ KOTA Process Backend Web API is Ready & Listening on http://localhost:{Port}", backendPort);
 
@@ -116,3 +109,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public record UpdateSchedulerRequest(string DailyTime, bool? IsEnabled);
+
