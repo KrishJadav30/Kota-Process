@@ -23,6 +23,9 @@ if exist "%PROJECT_DIR%\backend\KotaProcess.Api.csproj" (
     exit /b 1
 )
 
+:: Strip trailing backslash if present
+if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
+
 :: ===============================================================================
 :: Read Dynamic Ports from root .env file
 :: ===============================================================================
@@ -33,95 +36,99 @@ if exist "%PROJECT_DIR%\.env" (
     for /f "usebackq eol=# tokens=1* delims==" %%A in ("%PROJECT_DIR%\.env") do (
         set "ENV_KEY=%%A"
         set "ENV_VAL=%%B"
-        for /f "tokens=* delims= " %%K in ("!ENV_KEY!") do set "ENV_KEY=%%K"
-        for /f "tokens=* delims= " %%V in ("!ENV_VAL!") do set "ENV_VAL=%%V"
+        set "ENV_KEY=!ENV_KEY: =!"
+        set "ENV_VAL=!ENV_VAL: =!"
+        set "ENV_VAL=!ENV_VAL:"=!"
+        set "ENV_VAL=!ENV_VAL:'=!"
         if /i "!ENV_KEY!"=="FRONTEND_PORT" set "FRONTEND_PORT=!ENV_VAL!"
         if /i "!ENV_KEY!"=="BACKEND_PORT" set "BACKEND_PORT=!ENV_VAL!"
     )
 )
 
-set "FRONTEND_URL=http://localhost:%FRONTEND_PORT%"
-set "BACKEND_URL=http://localhost:%BACKEND_PORT%"
+set "FRONTEND_URL=http://localhost:!FRONTEND_PORT!"
+set "BACKEND_URL=http://localhost:!BACKEND_PORT!"
 
 echo ===============================================================================
 echo   ^> KOTA PROCESS - BACKGROUND SERVICE LAUNCHER
 echo ===============================================================================
-echo   Folder   : %CD%
+echo   Folder   : %PROJECT_DIR%
 echo   Config   : .env [Dynamic Port Synchronization]
-echo   Frontend : %FRONTEND_URL% [Port %FRONTEND_PORT%]
-echo   Backend  : %BACKEND_URL% [Port %BACKEND_PORT%]
+echo   Frontend : !FRONTEND_URL! [Port !FRONTEND_PORT!]
+echo   Backend  : !BACKEND_URL! [Port !BACKEND_PORT!]
 echo ===============================================================================
 echo.
 
 :: ===============================================================================
 :: Step 1: Check and Free Ports (Dynamic from .env)
 :: ===============================================================================
-echo [1/4] Checking and freeing ports %BACKEND_PORT% [Backend] and %FRONTEND_PORT% [Frontend]...
+echo [1/4] Checking and freeing ports !BACKEND_PORT! [Backend] and !FRONTEND_PORT! [Frontend]...
 
-:: Terminate any active process holding BACKEND_PORT
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%BACKEND_PORT% ^| findstr LISTENING') do (
-    if not "%%a"=="" if not "%%a"=="0" (
-        echo       Releasing port %BACKEND_PORT% - PID %%a
-        taskkill /F /PID %%a >nul 2>&1
-    )
-)
+:: Free current target ports from .env
+call :FREE_PORT "!BACKEND_PORT!"
+call :FREE_PORT "!FRONTEND_PORT!"
 
-:: Terminate any active process holding FRONTEND_PORT
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%FRONTEND_PORT% ^| findstr LISTENING') do (
-    if not "%%a"=="" if not "%%a"=="0" (
-        echo       Releasing port %FRONTEND_PORT% - PID %%a
-        taskkill /F /PID %%a >nul 2>&1
-    )
-)
+:: Safety cleanup: If ports changed from defaults (5001 / 5173), also ensure defaults are free
+if not "!BACKEND_PORT!"=="5001" call :FREE_PORT "5001"
+if not "!FRONTEND_PORT!"=="5173" call :FREE_PORT "5173"
 
-:: Safety cleanup: If ports changed from defaults (5001 / 5173), also free legacy defaults
-if not "%BACKEND_PORT%"=="5001" (
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5001 ^| findstr LISTENING') do (
-        if not "%%a"=="" if not "%%a"=="0" taskkill /F /PID %%a >nul 2>&1
-    )
-)
-if not "%FRONTEND_PORT%"=="5173" (
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5173 ^| findstr LISTENING') do (
-        if not "%%a"=="" if not "%%a"=="0" taskkill /F /PID %%a >nul 2>&1
-    )
-)
-
-:: Ensure any orphaned KotaProcess.Api process is terminated
+:: Terminate any active or orphaned KotaProcess.Api process
 taskkill /F /IM KotaProcess.Api.exe >nul 2>&1
 
-:: Wait 1 second to ensure ports are completely freed
+:: Wait 1 second to ensure ports are completely released by OS
 ping 127.0.0.1 -n 2 >nul
 
 :: ===============================================================================
 :: Step 2: Start Backend Web API in the Background
 :: ===============================================================================
-echo [2/4] Starting KOTA Process Backend Web API on port %BACKEND_PORT% in background...
-powershell -NoProfile -Command "Start-Process -FilePath 'dotnet' -ArgumentList 'run --no-launch-profile' -WorkingDirectory '%CD%\backend' -WindowStyle Hidden"
+echo [2/4] Starting KOTA Process Backend Web API on port !BACKEND_PORT! in background...
+powershell -NoProfile -Command "Start-Process -FilePath 'dotnet' -ArgumentList 'run --no-launch-profile' -WorkingDirectory '%PROJECT_DIR%\backend' -WindowStyle Hidden"
 
 :: ===============================================================================
 :: Step 3: Start Frontend Dev Server in the Background
 :: ===============================================================================
-echo [3/4] Starting KOTA Process Frontend UI on port %FRONTEND_PORT% in background...
-powershell -NoProfile -Command "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c npm run dev' -WorkingDirectory '%CD%\frontend' -WindowStyle Hidden"
+echo [3/4] Starting KOTA Process Frontend UI on port !FRONTEND_PORT! in background...
+powershell -NoProfile -Command "Start-Process -FilePath 'cmd.exe' -ArgumentList '/c npm run dev' -WorkingDirectory '%PROJECT_DIR%\frontend' -WindowStyle Hidden"
 
 :: ===============================================================================
-:: Step 4: Verify and Launch Web Browser
+:: Step 4: Verify Services and Launch Web Browser
 :: ===============================================================================
 echo [4/4] Verifying background services and launching browser...
 
-:: Wait 3 seconds for background servers to initialize
-ping 127.0.0.1 -n 4 >nul
+:: Wait for frontend to be active (check for LISTENING status, up to 8 seconds)
+set /a WAIT_COUNT=0
+:WAIT_LOOP
+set /a WAIT_COUNT+=1
+ping 127.0.0.1 -n 2 >nul
+netstat -ano | findstr /c:":!FRONTEND_PORT! " | findstr LISTENING >nul 2>&1
+if errorlevel 1 (
+    if !WAIT_COUNT! lss 8 goto WAIT_LOOP
+)
 
 :: Open dynamic frontend URL in default browser
-start "" "%FRONTEND_URL%"
+start "" "!FRONTEND_URL!"
 
 echo.
 echo ===============================================================================
 echo   [OK] KOTA Process is now active and running in the background!
-echo   Frontend : %FRONTEND_URL%
-echo   Backend  : %BACKEND_URL%
+echo   Frontend : !FRONTEND_URL!
+echo   Backend  : !BACKEND_URL!
 echo   Closing launcher window...
 echo ===============================================================================
 
 ping 127.0.0.1 -n 3 >nul
-exit
+exit /b 0
+
+:: -------------------------------------------------------------------------------
+:: Helper Subroutine: Terminate processes listening on a specific port
+:: -------------------------------------------------------------------------------
+:FREE_PORT
+set "TARGET_PORT=%~1"
+if not "%TARGET_PORT%"=="" (
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr /c:":%TARGET_PORT% " ^| findstr LISTENING') do (
+        if not "%%a"=="" if not "%%a"=="0" (
+            echo       Releasing port %TARGET_PORT% - PID %%a
+            taskkill /F /PID %%a >nul 2>&1
+        )
+    )
+)
+exit /b 0

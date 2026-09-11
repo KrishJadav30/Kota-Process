@@ -4,7 +4,7 @@
       "Id": "shift-1",
       "Label": "Night Shift",
       "Time": "06:00",
-      "IsEnabled": true,
+      "IsEnabled": false,
       "IsNightShift": true
     },
     {
@@ -31,5 +31,5 @@
   ],
   "DailyTime": "06:00",
   "IsEnabled": true,
-  "LastUpdated": "2026-09-11T10:38:52.4956881Z"
+  "LastUpdated": "2026-09-11T10:42:53.1376601Z"
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,12 +11,13 @@ export function AutoProcessPage() {
   const [scheduler, setScheduler] = useState<SchedulerStatusDto | null>(null)
   const [history, setHistory] = useState<ProcessHistoryItem[]>([])
   const [historyFilter, setHistoryFilter] = useState<'all' | 'automated' | 'manual'>('all')
-  const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>([
+  const schedulesRef = useRef<ScheduledTimeSlot[]>([
     { id: 'shift-1', label: 'Night Shift', time: '06:00', isEnabled: true, isNightShift: true },
     { id: 'shift-2', label: 'Morning Shift', time: '12:00', isEnabled: true, isNightShift: false },
     { id: 'shift-3', label: 'Evening Shift', time: '18:00', isEnabled: true, isNightShift: false },
     { id: 'shift-4', label: 'Midnight Shift', time: '00:00', isEnabled: true, isNightShift: true }
   ])
+  const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>(schedulesRef.current)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [isSaved, setIsSaved] = useState<boolean>(false)
@@ -56,11 +57,12 @@ export function AutoProcessPage() {
     }
   }, [])
 
-  // Auto-fetch data on mount and keep polling every 8s so new records always appear whether page was open or closed
+  // Fetch initial data on mount once, and poll background history/status every 8s
+  // Strictly prevent background polling from resetting or overwriting active schedules state!
   useEffect(() => {
     let isMounted = true
 
-    async function fetchData() {
+    async function initialFetch() {
       try {
         const [configData, historyData] = await Promise.allSettled([
           api.getSchedulerConfig(),
@@ -73,13 +75,13 @@ export function AutoProcessPage() {
           setScheduler(configData.value)
           if (configData.value.schedules && configData.value.schedules.length > 0) {
             const list = configData.value.schedules
-            const s1 = list.find(s => s.id === 'shift-1' || s.label.toLowerCase().includes('night'))
+            const s1 = list.find(s => s.id === 'shift-1' || s.label.toLowerCase().startsWith('night'))
               || { id: 'shift-1', label: 'Night Shift', time: '06:00', isEnabled: true, isNightShift: true }
-            const s2 = list.find(s => s.id === 'shift-2' || s.label.toLowerCase().includes('morning'))
+            const s2 = list.find(s => s.id === 'shift-2' || s.label.toLowerCase().startsWith('morning'))
               || { id: 'shift-2', label: 'Morning Shift', time: '12:00', isEnabled: true, isNightShift: false }
-            const s3 = list.find(s => s.id === 'shift-3' || s.label.toLowerCase().includes('evening'))
+            const s3 = list.find(s => s.id === 'shift-3' || s.label.toLowerCase().startsWith('evening'))
               || { id: 'shift-3', label: 'Evening Shift', time: '18:00', isEnabled: true, isNightShift: false }
-            const s4 = list.find(s => s.id === 'shift-4' || s.label.toLowerCase().includes('midnight'))
+            const s4 = list.find(s => s.id === 'shift-4' || s.label.toLowerCase().startsWith('midnight'))
               || { id: 'shift-4', label: 'Midnight Shift', time: '00:00', isEnabled: true, isNightShift: true }
 
             s1.label = 'Night Shift'
@@ -87,7 +89,9 @@ export function AutoProcessPage() {
             s3.label = 'Evening Shift'
             s4.label = 'Midnight Shift'
 
-            setSchedules([s1, s2, s3, s4])
+            const loaded = [s1, s2, s3, s4]
+            setSchedules(loaded)
+            schedulesRef.current = loaded
           }
         }
 
@@ -103,12 +107,29 @@ export function AutoProcessPage() {
       }
     }
 
-    fetchData()
+    initialFetch()
 
-    // Autonomous polling: refresh every 8s so whenever a background job finishes, records always appear
-    const pollInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchData()
+    // Autonomous polling: refresh every 8s ONLY for history logs and scheduler next run status
+    // NEVER overwrite the user's active schedules form state!
+    const pollInterval = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
+
+      try {
+        const [historyData, configData] = await Promise.allSettled([
+          api.getProcessHistory(),
+          api.getSchedulerConfig()
+        ])
+
+        if (!isMounted) return
+
+        if (historyData.status === 'fulfilled') {
+          setHistory([...historyData.value])
+        }
+        if (configData.status === 'fulfilled') {
+          setScheduler(configData.value)
+        }
+      } catch (err) {
+        console.warn('Background polling error:', err)
       }
     }, 8000)
 
@@ -140,43 +161,68 @@ export function AutoProcessPage() {
   }, [isRunModalOpen, isRunningNow])
 
   const handleSlotTimeChange = (index: number, newTime: string) => {
-    setSchedules(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], time: newTime }
-      return next
-    })
+    const current = schedulesRef.current
+    const updatedSchedules = current.map((slot, i) =>
+      i === index ? { ...slot, time: newTime } : slot
+    )
+    schedulesRef.current = updatedSchedules
+    setSchedules(updatedSchedules)
     setIsSaved(false)
   }
 
-  const handleToggleEnabled = (index: number) => {
-    setSchedules(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], isEnabled: !next[index].isEnabled }
-      return next
-    })
+  // Toggling Active/Paused updates immediately and auto-persists to backend without race conditions
+  const handleToggleEnabled = async (index: number) => {
+    const current = schedulesRef.current
+    const updatedSchedules = current.map((slot, i) =>
+      i === index ? { ...slot, isEnabled: !slot.isEnabled } : slot
+    )
+    schedulesRef.current = updatedSchedules
+    setSchedules(updatedSchedules)
     setIsSaved(false)
+
+    try {
+      const updated = await api.updateSchedulerConfig(undefined, true, updatedSchedules)
+      setScheduler(updated)
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2500)
+    } catch (err) {
+      console.error('Failed to auto-save shift toggle:', err)
+    }
   }
 
-  const handleToggleNightShift = (index: number) => {
-    setSchedules(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], isNightShift: !next[index].isNightShift }
-      return next
-    })
+  // Toggling 2-Day / 1-Day updates immediately and auto-persists to backend
+  const handleToggleNightShift = async (index: number) => {
+    const current = schedulesRef.current
+    const updatedSchedules = current.map((slot, i) =>
+      i === index ? { ...slot, isNightShift: !slot.isNightShift } : slot
+    )
+    schedulesRef.current = updatedSchedules
+    setSchedules(updatedSchedules)
     setIsSaved(false)
+
+    try {
+      const updated = await api.updateSchedulerConfig(undefined, true, updatedSchedules)
+      setScheduler(updated)
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2500)
+    } catch (err) {
+      console.error('Failed to auto-save night shift toggle:', err)
+    }
   }
 
   const handleSaveAllSchedules = async () => {
     setIsSaving(true)
     setIsSaved(false)
     try {
-      const updated = await api.updateSchedulerConfig(undefined, true, schedules)
+      const current = schedulesRef.current
+      const updated = await api.updateSchedulerConfig(undefined, true, current)
       setScheduler(updated)
       if (updated.schedules && updated.schedules.length > 0) {
         setSchedules(updated.schedules)
+        schedulesRef.current = updated.schedules
       }
       setIsSaved(true)
-      setTimeout(() => setIsSaved(false), 4000)
+      setTimeout(() => setIsSaved(false), 3000)
     } catch (err) {
       console.error('Failed to save scheduler config:', err)
       alert('Failed to save schedules to server. Please check your connection.')
@@ -351,7 +397,7 @@ export function AutoProcessPage() {
 
             {/* Right Action Controls: Clean side-by-side single row alignment */}
             <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap justify-start xl:justify-end shrink-0">
-              {scheduler?.nextRunTime && (
+              {scheduler?.nextRunTime ? (
                 <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/90 text-blue-950 text-xs sm:text-sm font-semibold whitespace-nowrap shadow-2xs">
                   <span className="text-slate-500 font-medium">Next Upcoming:</span>
                   <span className="font-bold text-blue-900">{formatNextRun(scheduler.nextRunTime)}</span>
@@ -363,6 +409,10 @@ export function AutoProcessPage() {
                       🌙 2-Day
                     </span>
                   )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50/80 border border-amber-200/90 text-amber-950 text-xs sm:text-sm font-semibold whitespace-nowrap shadow-2xs">
+                  <span className="text-amber-800 font-semibold">⚠️ All Shifts Paused</span>
                 </div>
               )}
 

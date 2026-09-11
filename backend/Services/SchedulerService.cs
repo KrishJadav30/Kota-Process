@@ -234,25 +234,25 @@ public class SchedulerService : BackgroundService, ISchedulerService
         {
             var normalized = new List<ScheduledTimeSlot>();
 
-            var s1 = schedules.FirstOrDefault(s => s.Id == "shift-1" || s.Label.Contains("Night", StringComparison.OrdinalIgnoreCase))
+            var s1 = schedules.FirstOrDefault(s => s.Id == "shift-1" || s.Label.StartsWith("Night", StringComparison.OrdinalIgnoreCase))
                      ?? new ScheduledTimeSlot { Id = "shift-1", Label = "Night Shift", Time = "06:00", IsNightShift = true, IsEnabled = true };
             s1.Id = "shift-1";
             s1.Label = "Night Shift";
             normalized.Add(s1);
 
-            var s2 = schedules.FirstOrDefault(s => s.Id == "shift-2" || s.Label.Contains("Morning", StringComparison.OrdinalIgnoreCase))
+            var s2 = schedules.FirstOrDefault(s => s.Id == "shift-2" || s.Label.StartsWith("Morning", StringComparison.OrdinalIgnoreCase))
                      ?? new ScheduledTimeSlot { Id = "shift-2", Label = "Morning Shift", Time = "12:00", IsNightShift = false, IsEnabled = true };
             s2.Id = "shift-2";
             s2.Label = "Morning Shift";
             normalized.Add(s2);
 
-            var s3 = schedules.FirstOrDefault(s => s.Id == "shift-3" || s.Label.Contains("Evening", StringComparison.OrdinalIgnoreCase))
+            var s3 = schedules.FirstOrDefault(s => s.Id == "shift-3" || s.Label.StartsWith("Evening", StringComparison.OrdinalIgnoreCase))
                      ?? new ScheduledTimeSlot { Id = "shift-3", Label = "Evening Shift", Time = "18:00", IsNightShift = false, IsEnabled = true };
             s3.Id = "shift-3";
             s3.Label = "Evening Shift";
             normalized.Add(s3);
 
-            var s4 = schedules.FirstOrDefault(s => s.Id == "shift-4" || s.Label.Contains("Midnight", StringComparison.OrdinalIgnoreCase))
+            var s4 = schedules.FirstOrDefault(s => s.Id == "shift-4" || s.Label.StartsWith("Midnight", StringComparison.OrdinalIgnoreCase))
                      ?? new ScheduledTimeSlot { Id = "shift-4", Label = "Midnight Shift", Time = "00:00", IsNightShift = true, IsEnabled = true };
             s4.Id = "shift-4";
             s4.Label = "Midnight Shift";
