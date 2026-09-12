@@ -7,26 +7,30 @@ import { formatLocalDate, parseLocalDate } from '@/lib/utils'
 import { api, type SchedulerStatusDto, type ProcessHistoryItem, type ScheduledTimeSlot, type WeeklyScheduleSlot } from '@/api'
 import { Clock, Save, CheckCircle2, Play, RefreshCw, X, Calendar, ArrowRight, Timer, AlertCircle, Bot, User } from 'lucide-react'
 
+const DEFAULT_SCHEDULES: ScheduledTimeSlot[] = [
+  { id: 'shift-1', label: 'Night Shift', time: '06:00', isEnabled: true, isNightShift: true },
+  { id: 'shift-2', label: 'Morning Shift', time: '12:00', isEnabled: true, isNightShift: false },
+  { id: 'shift-3', label: 'Evening Shift', time: '18:00', isEnabled: true, isNightShift: false },
+  { id: 'shift-4', label: 'Midnight Shift', time: '00:00', isEnabled: true, isNightShift: true }
+]
+
+const DEFAULT_WEEKLY_SCHEDULE: WeeklyScheduleSlot = {
+  id: 'weekly-1',
+  label: 'Weekly Schedule',
+  dayOfWeek: 'Monday',
+  time: '06:00',
+  isEnabled: false,
+  daysCount: 8
+}
+
 export function AutoProcessPage() {
   const [scheduler, setScheduler] = useState<SchedulerStatusDto | null>(null)
   const [history, setHistory] = useState<ProcessHistoryItem[]>([])
   const [historyFilter, setHistoryFilter] = useState<'all' | 'automated' | 'manual'>('all')
-  const schedulesRef = useRef<ScheduledTimeSlot[]>([
-    { id: 'shift-1', label: 'Night Shift', time: '06:00', isEnabled: true, isNightShift: true },
-    { id: 'shift-2', label: 'Morning Shift', time: '12:00', isEnabled: true, isNightShift: false },
-    { id: 'shift-3', label: 'Evening Shift', time: '18:00', isEnabled: true, isNightShift: false },
-    { id: 'shift-4', label: 'Midnight Shift', time: '00:00', isEnabled: true, isNightShift: true }
-  ])
-  const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>(schedulesRef.current)
-  const weeklyScheduleRef = useRef<WeeklyScheduleSlot>({
-    id: 'weekly-1',
-    label: 'Weekly Schedule',
-    dayOfWeek: 'Monday',
-    time: '06:00',
-    isEnabled: false,
-    daysCount: 8
-  })
-  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleSlot>(weeklyScheduleRef.current)
+  const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>(DEFAULT_SCHEDULES)
+  const schedulesRef = useRef<ScheduledTimeSlot[]>(DEFAULT_SCHEDULES)
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleSlot>(DEFAULT_WEEKLY_SCHEDULE)
+  const weeklyScheduleRef = useRef<WeeklyScheduleSlot>(DEFAULT_WEEKLY_SCHEDULE)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [isSaved, setIsSaved] = useState<boolean>(false)
