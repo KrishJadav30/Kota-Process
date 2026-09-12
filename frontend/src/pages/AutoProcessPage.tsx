@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatLocalDate, parseLocalDate } from '@/lib/utils'
-import { api, type SchedulerStatusDto, type ProcessHistoryItem, type ScheduledTimeSlot } from '@/api'
+import { api, type SchedulerStatusDto, type ProcessHistoryItem, type ScheduledTimeSlot, type WeeklyScheduleSlot } from '@/api'
 import { Clock, Save, CheckCircle2, Play, RefreshCw, X, Calendar, ArrowRight, Timer, AlertCircle, Bot, User } from 'lucide-react'
 
 export function AutoProcessPage() {
@@ -18,9 +18,20 @@ export function AutoProcessPage() {
     { id: 'shift-4', label: 'Midnight Shift', time: '00:00', isEnabled: true, isNightShift: true }
   ])
   const [schedules, setSchedules] = useState<ScheduledTimeSlot[]>(schedulesRef.current)
+  const weeklyScheduleRef = useRef<WeeklyScheduleSlot>({
+    id: 'weekly-1',
+    label: 'Weekly Schedule',
+    dayOfWeek: 'Monday',
+    time: '06:00',
+    isEnabled: false,
+    daysCount: 8
+  })
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleSlot>(weeklyScheduleRef.current)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [isSaved, setIsSaved] = useState<boolean>(false)
+  const [isSavingWeekly, setIsSavingWeekly] = useState<boolean>(false)
+  const [isSavedWeekly, setIsSavedWeekly] = useState<boolean>(false)
   const [isRunningNow, setIsRunningNow] = useState<boolean>(false)
   const [isRefreshingHistory, setIsRefreshingHistory] = useState<boolean>(false)
 
@@ -92,6 +103,20 @@ export function AutoProcessPage() {
             const loaded = [s1, s2, s3, s4]
             setSchedules(loaded)
             schedulesRef.current = loaded
+          }
+
+          if (configData.value.weeklySchedule) {
+            const ws = configData.value.weeklySchedule
+            const loadedWeekly: WeeklyScheduleSlot = {
+              id: ws.id || 'weekly-1',
+              label: ws.label || 'Weekly Schedule',
+              dayOfWeek: ws.dayOfWeek || 'Monday',
+              time: ws.time || '06:00',
+              isEnabled: !!ws.isEnabled,
+              daysCount: 8
+            }
+            setWeeklySchedule(loadedWeekly)
+            weeklyScheduleRef.current = loadedWeekly
           }
         }
 
@@ -215,19 +240,87 @@ export function AutoProcessPage() {
     setIsSaved(false)
     try {
       const current = schedulesRef.current
-      const updated = await api.updateSchedulerConfig(undefined, true, current)
+      const currentWeekly = weeklyScheduleRef.current
+      const updated = await api.updateSchedulerConfig(undefined, true, current, currentWeekly)
       setScheduler(updated)
       if (updated.schedules && updated.schedules.length > 0) {
         setSchedules(updated.schedules)
         schedulesRef.current = updated.schedules
       }
+      if (updated.weeklySchedule) {
+        setWeeklySchedule(updated.weeklySchedule)
+        weeklyScheduleRef.current = updated.weeklySchedule
+      }
       setIsSaved(true)
       setTimeout(() => setIsSaved(false), 3000)
     } catch (err) {
       console.error('Failed to save scheduler config:', err)
-      alert('Failed to save schedules to server. Please check your connection.')
+      alert('Failed to save schedules to server: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  // Weekly Schedule Handlers
+  const handleWeeklyDayChange = (day: string) => {
+    const updated: WeeklyScheduleSlot = {
+      ...weeklyScheduleRef.current,
+      dayOfWeek: day
+    }
+    weeklyScheduleRef.current = updated
+    setWeeklySchedule(updated)
+    setIsSavedWeekly(false)
+  }
+
+  const handleWeeklyTimeChange = (time: string) => {
+    const updated: WeeklyScheduleSlot = {
+      ...weeklyScheduleRef.current,
+      time
+    }
+    weeklyScheduleRef.current = updated
+    setWeeklySchedule(updated)
+    setIsSavedWeekly(false)
+  }
+
+  const handleToggleWeeklyEnabled = async () => {
+    const updated: WeeklyScheduleSlot = {
+      ...weeklyScheduleRef.current,
+      isEnabled: !weeklyScheduleRef.current.isEnabled
+    }
+    weeklyScheduleRef.current = updated
+    setWeeklySchedule(updated)
+    setIsSavedWeekly(false)
+
+    try {
+      const currentSchedules = schedulesRef.current
+      const result = await api.updateSchedulerConfig(undefined, true, currentSchedules, updated)
+      setScheduler(result)
+      setIsSavedWeekly(true)
+      setTimeout(() => setIsSavedWeekly(false), 2500)
+    } catch (err) {
+      console.error('Failed to toggle weekly schedule:', err)
+    }
+  }
+
+  const handleSaveWeeklySchedule = async () => {
+    setIsSavingWeekly(true)
+    setIsSavedWeekly(false)
+    try {
+      const current = weeklyScheduleRef.current
+      const currentSchedules = schedulesRef.current
+      const result = await api.updateSchedulerConfig(undefined, true, currentSchedules, current)
+      setScheduler(result)
+      if (result.weeklySchedule) {
+        setWeeklySchedule(result.weeklySchedule)
+        weeklyScheduleRef.current = result.weeklySchedule
+      }
+      setIsSavedWeekly(true)
+      setTimeout(() => setIsSavedWeekly(false), 3000)
+    } catch (err) {
+      console.error('Failed to save weekly schedule:', err)
+      alert('Failed to save weekly schedule to server: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setIsSavingWeekly(false)
     }
   }
 
@@ -250,6 +343,14 @@ export function AutoProcessPage() {
     const now = new Date()
     const past = new Date()
     past.setDate(past.getDate() - 6)
+    setFromDate(formatLocalDate(past))
+    setToDate(formatLocalDate(now))
+  }
+
+  const handlePresetWeekly8Days = () => {
+    const now = new Date()
+    const past = new Date()
+    past.setDate(past.getDate() - 7)
     setFromDate(formatLocalDate(past))
     setToDate(formatLocalDate(now))
   }
@@ -320,6 +421,23 @@ export function AutoProcessPage() {
     }
   }
 
+  const formatWeeklyNextRun = (isoString?: string | null) => {
+    if (!isoString) return 'Not scheduled'
+    try {
+      const d = new Date(isoString)
+      const datePart = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      return `${datePart} at ${timePart}`
+    } catch {
+      return isoString
+    }
+  }
+
+  const isWeeklyTrigger = (trigger?: string) => {
+    if (!trigger) return false
+    return trigger.toLowerCase().includes('weekly')
+  }
+
   const formatDateTime = (isoString?: string) => {
     if (!isoString) return '-'
     try {
@@ -370,6 +488,35 @@ export function AutoProcessPage() {
         <p className="text-slate-600 text-sm sm:text-base font-normal mt-1">
           Set the daily time to automatically run the process in the background. In this automated process, employee entry is considered as 4 (Entry 4) to automatically process attendance data.
         </p>
+      </div>
+
+      {/* 0. Autonomous 24/7 Background Service Live Status Banner */}
+      <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white shadow-xs border border-blue-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-lg bg-blue-500/20 border border-blue-400/30 flex items-center justify-center shrink-0">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Autonomous 24/7 Background Service Active
+              </span>
+              <span className="text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                Always Running
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-300 font-normal mt-0.5">
+              Scheduled daily shift and weekly processes execute directly on the backend server. The web browser does not need to stay open.
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-2 self-start sm:self-auto text-xs font-semibold text-blue-200 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+          <Clock className="h-3.5 w-3.5 text-blue-300" />
+          <span>Server Worker Standby</span>
+        </div>
       </div>
 
       {/* 1. Automated Shift Schedules Box (Multi-Time + Night Shift 2-Day Support) */}
@@ -532,6 +679,169 @@ export function AutoProcessPage() {
         </CardContent>
       </Card>
 
+      {/* 2. Automated Weekly Schedule Card (8 Days Processing) */}
+      <Card className="border border-indigo-200/90 bg-white shadow-xs rounded-xl overflow-hidden w-full">
+        <CardHeader className="p-5 pb-4 border-b border-indigo-100 bg-gradient-to-r from-indigo-50/50 via-white to-blue-50/30">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="h-10 w-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold shadow-2xs shrink-0">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
+                    Automated Weekly Schedule
+                  </CardTitle>
+                  <Badge variant="outline" className={`text-xs font-semibold shrink-0 ${weeklySchedule.isEnabled ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-300'}`}>
+                    {weeklySchedule.isEnabled ? 'Active Weekly' : 'Paused'}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 shrink-0">
+                    8 Days Processing
+                  </Badge>
+                </div>
+                <CardDescription className="text-slate-500 text-xs sm:text-sm font-normal mt-0.5">
+                  Configure weekly automated execution on a selected day and time, processing 8 days of data (today + previous 7 days).
+                </CardDescription>
+              </div>
+            </div>
+
+            {/* Right Status Badge (Run button removed per user request) */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {weeklySchedule.isEnabled && scheduler?.nextWeeklyRunTime ? (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-50/80 border border-indigo-200/90 text-indigo-950 text-xs sm:text-sm font-semibold whitespace-nowrap shadow-2xs">
+                  <span className="text-slate-500 font-medium">Next Weekly Run:</span>
+                  <span className="font-bold text-indigo-900">{formatWeeklyNextRun(scheduler.nextWeeklyRunTime)}</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-800 text-2xs font-bold uppercase tracking-wider">
+                    8 Days
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold whitespace-nowrap shadow-2xs">
+                  <span className="text-slate-600 font-semibold">⏸️ Weekly Schedule Paused</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+            {/* Day of Week Selector: 7 clean single-line pills */}
+            <div className="lg:col-span-6 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Execution Day of Week
+                </label>
+                <span className="text-xs font-bold text-indigo-600">
+                  {weeklySchedule.dayOfWeek}
+                </span>
+              </div>
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+                  const isSelected = weeklySchedule.dayOfWeek.toLowerCase() === day.toLowerCase()
+                  const shortDay = day.slice(0, 3)
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => handleWeeklyDayChange(day)}
+                      title={day}
+                      className={`h-11 rounded-lg text-xs sm:text-sm font-bold border transition-all cursor-pointer flex items-center justify-center whitespace-nowrap select-none ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-300 font-extrabold'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-300 font-semibold'
+                      }`}
+                    >
+                      {shortDay}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Execution Time Picker */}
+            <div className="lg:col-span-3 space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Scheduled Time
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="time"
+                  value={weeklySchedule.time}
+                  onChange={(e) => handleWeeklyTimeChange(e.target.value)}
+                  className="h-11 px-3 text-base font-semibold font-mono text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs focus:border-indigo-600 focus:outline-none transition-colors cursor-pointer w-32 shrink-0"
+                />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold text-slate-800 leading-tight">
+                    {formatTo12Hour(weeklySchedule.time)}
+                  </span>
+                  <span className="text-2xs text-slate-500 font-medium truncate mt-0.5">
+                    Every {weeklySchedule.dayOfWeek}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Toggle */}
+            <div className="lg:col-span-3 space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                Schedule Status
+              </label>
+              <button
+                type="button"
+                onClick={handleToggleWeeklyEnabled}
+                className={`h-11 w-full px-4 font-bold text-xs sm:text-sm rounded-lg cursor-pointer transition-all border flex items-center justify-center gap-2 ${
+                  weeklySchedule.isEnabled
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${weeklySchedule.isEnabled ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`}></span>
+                <span>{weeklySchedule.isEnabled ? 'ACTIVE' : 'PAUSED'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 8 Days Data Explanation Banner */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-50/70 to-purple-50/60 border border-indigo-200/80 text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs sm:text-sm shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base shrink-0">📆</span>
+              <span>
+                <strong className="font-bold text-indigo-950">8 Days Continuous Coverage:</strong> Every{' '}
+                <strong className="text-indigo-900">{weeklySchedule.dayOfWeek}</strong> at{' '}
+                <strong className="text-indigo-900">{formatTo12Hour(weeklySchedule.time)}</strong>, the process automatically processes{' '}
+                <strong>8 calendar days</strong>: {weeklySchedule.dayOfWeek} of that day and previous 7 days ({weeklySchedule.dayOfWeek} to Sunday).
+              </span>
+            </div>
+            <span className="px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-900 font-bold text-2xs uppercase tracking-wider shrink-0 self-start sm:self-center">
+              Entry 4 Attendance
+            </span>
+          </div>
+
+          {/* Action Row: Dedicated Save Weekly Schedule (Matches Save Shift Timings) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+            <div>
+              {isSavedWeekly && (
+                <div className="p-2.5 px-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-800 animate-in fade-in">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Weekly schedule successfully updated and saved. Backend is active.</span>
+                </div>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleSaveWeeklySchedule}
+              disabled={isSavingWeekly || isLoading}
+              className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm rounded-lg shadow-2xs flex items-center justify-center gap-2 cursor-pointer transition-all self-end shrink-0 ml-auto"
+            >
+              <Save className={`h-4 w-4 ${isSavingWeekly ? 'animate-spin' : ''}`} />
+              <span>{isSavingWeekly ? 'Saving Weekly Schedule...' : 'Save Weekly Schedule'}</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Date Range Selection Modal with shadcn Calendar DatePicker */}
       {isRunModalOpen && (
         <div
@@ -601,6 +911,14 @@ export function AutoProcessPage() {
                     className="px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 cursor-pointer transition-colors"
                   >
                     Last 7 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePresetWeekly8Days}
+                    disabled={isRunningNow}
+                    className="px-3.5 py-1.5 text-xs sm:text-sm font-bold rounded-lg border border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-800 cursor-pointer transition-colors"
+                  >
+                    Weekly (8 Days)
                   </button>
                   <button
                     type="button"
@@ -826,12 +1144,15 @@ export function AutoProcessPage() {
                       filteredHistory.map((item) => {
                         const isSuccess = item.status === 'Success'
                         const isAuto = isAutomatedTrigger(item.triggerSource)
+                        const isWeekly = isWeeklyTrigger(item.triggerSource)
 
                         return (
                           <tr
                             key={item.id}
                             className={`divide-x divide-slate-200 transition-colors ${
-                              isAuto
+                              isWeekly
+                                ? 'border-l-4 border-l-indigo-600 bg-indigo-50/15 hover:bg-indigo-50/35'
+                                : isAuto
                                 ? 'border-l-4 border-l-blue-600 bg-blue-50/15 hover:bg-blue-50/40'
                                 : 'border-l-4 border-l-amber-500 bg-amber-50/15 hover:bg-amber-50/40'
                             }`}
@@ -839,7 +1160,9 @@ export function AutoProcessPage() {
                             {/* Process Date */}
                             <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 whitespace-nowrap text-sm w-[170px]">
                               <div className="flex items-center gap-1.5">
-                                {isAuto ? (
+                                {isWeekly ? (
+                                  <Calendar className="h-4 w-4 text-indigo-600 shrink-0" />
+                                ) : isAuto ? (
                                   <Clock className="h-4 w-4 text-blue-600 shrink-0" />
                                 ) : (
                                   <Calendar className="h-4 w-4 text-amber-600 shrink-0" />
@@ -877,7 +1200,9 @@ export function AutoProcessPage() {
                               <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
                                 <span
                                   className={`px-2.5 py-0.5 rounded-md font-semibold border ${
-                                    isAuto
+                                    isWeekly
+                                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                      : isAuto
                                       ? 'bg-blue-50 text-blue-700 border-blue-200'
                                       : 'bg-amber-50 text-amber-800 border-amber-200'
                                   }`}
@@ -892,7 +1217,25 @@ export function AutoProcessPage() {
 
                             {/* Trigger Source - Differentiated with Colors & Icons */}
                             <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[280px]">
-                              {isAuto ? (
+                              {isWeekly ? (
+                                <div className="p-2 rounded-lg bg-indigo-50/90 border border-indigo-200/90 text-indigo-950 flex flex-col gap-1 shadow-2xs">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider bg-indigo-600 text-white shadow-2xs">
+                                      <Bot className="h-3 w-3" />
+                                      Automated
+                                    </span>
+                                    <span className="text-2xs font-bold text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded">
+                                      Weekly Schedule
+                                    </span>
+                                    <span className="text-2xs font-bold text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded">
+                                      8 Days
+                                    </span>
+                                  </div>
+                                  <div className="text-xs font-semibold text-indigo-900 leading-snug break-words">
+                                    {item.triggerSource}
+                                  </div>
+                                </div>
+                              ) : isAuto ? (
                                 <div className="p-2 rounded-lg bg-blue-50/90 border border-blue-200/90 text-blue-950 flex flex-col gap-1 shadow-2xs">
                                   <div className="flex items-center gap-1.5">
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider bg-blue-600 text-white shadow-2xs">

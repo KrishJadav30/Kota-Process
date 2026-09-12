@@ -205,7 +205,14 @@ try
 
     app.MapPost("/api/scheduler/config", async (ISchedulerService scheduler, UpdateSchedulerRequest req) =>
     {
-        var result = await scheduler.UpdateConfigAsync(req.DailyTime, req.IsEnabled, req.Schedules);
+        var result = await scheduler.UpdateConfigAsync(req.DailyTime, req.IsEnabled, req.Schedules, req.WeeklySchedule);
+        return Results.Ok(result);
+    });
+
+    // On-Demand Weekly Run Trigger Endpoint (8 Days Processing: Today minus 7 days to Today)
+    app.MapPost("/api/scheduler/run-weekly", async (ISchedulerService scheduler, RunWeeklyRequest? req) =>
+    {
+        var result = await scheduler.TriggerWeeklyRunNowAsync(req?.DayOfWeek);
         return Results.Ok(result);
     });
 
@@ -318,7 +325,12 @@ finally
     Log.CloseAndFlush();
 }
 
-public record UpdateSchedulerRequest(string? DailyTime, bool? IsEnabled, List<KotaProcess.Api.Services.ScheduledTimeSlot>? Schedules = null);
+public record UpdateSchedulerRequest(
+    string? DailyTime, 
+    bool? IsEnabled, 
+    List<KotaProcess.Api.Services.ScheduledTimeSlot>? Schedules = null, 
+    KotaProcess.Api.Services.WeeklyScheduleSlot? WeeklySchedule = null);
+public record RunWeeklyRequest(string? DayOfWeek);
 public record RunNowRequest(string? FromDate, string? ToDate, string? TargetDate);
 public record ExecuteManualSwappingRequest(string? FromDate, string? ToDate);
 public record LoginRequest(string? Email, string? Password);

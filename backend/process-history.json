@@ -1,5 +1,29 @@
 [
   {
+    "Id": "b341d07f7e4448b09beae05d3a43835e",
+    "ProcessDate": "2026-09-05 to 2026-09-12",
+    "ExecutedAt": "2026-09-12T06:45:02.6513672Z",
+    "Status": "Success",
+    "DurationMs": 809,
+    "RowsUpdated": 0,
+    "RowsInserted": 0,
+    "TriggerSource": "Autonomous Weekly Schedule - Saturday (8 Days: 2026-09-05 to 2026-09-12, Ran at 12:15 PM)",
+    "Message": "Ran at 12:15:03 PM. Completed in 809ms. Updated 0 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "291ef588af9e4dfa9ac45b10ede2a55b",
+    "ProcessDate": "2026-09-05 to 2026-09-12",
+    "ExecutedAt": "2026-09-12T06:43:00.5961276Z",
+    "Status": "Success",
+    "DurationMs": 1009,
+    "RowsUpdated": 0,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger - Weekly Schedule (Monday, 8 Days: 2026-09-05 to 2026-09-12, Ran at 12:13 PM)",
+    "Message": "Ran at 12:13:01 PM. Completed in 1009ms. Updated 0 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "7d1ac4d766ef41b5b42413f91597f4d9",
     "ProcessDate": "2026-09-11 to 2026-10-31",
     "ExecutedAt": "2026-09-11T09:37:36.6966271Z",

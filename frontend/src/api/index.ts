@@ -12,13 +12,25 @@ export interface ScheduledTimeSlot {
   isNightShift: boolean
 }
 
+export interface WeeklyScheduleSlot {
+  id: string
+  label: string
+  dayOfWeek: string // 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
+  time: string      // HH:mm 24-hr
+  isEnabled: boolean
+  daysCount: number // 8 days
+}
+
 export interface SchedulerStatusDto {
   schedules?: ScheduledTimeSlot[]
+  weeklySchedule?: WeeklyScheduleSlot
   dailyTime: string
   isEnabled: boolean
   nextRunTime: string | null
   nextRunLabel?: string | null
   nextRunIsNightShift?: boolean | null
+  nextWeeklyRunTime?: string | null
+  nextWeeklyRunDay?: string | null
   lastRunTime: string | null
   lastRunStatus: string
   lastRunMessage: string
@@ -184,7 +196,8 @@ export const api = {
   async updateSchedulerConfig(
     dailyTime?: string,
     isEnabled = true,
-    schedules?: ScheduledTimeSlot[]
+    schedules?: ScheduledTimeSlot[],
+    weeklySchedule?: WeeklyScheduleSlot
   ): Promise<SchedulerStatusDto> {
     const res = await fetch(`/api/scheduler/config?_t=${Date.now()}`, {
       method: 'POST',
@@ -194,9 +207,24 @@ export const api = {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
       },
-      body: JSON.stringify({ dailyTime, isEnabled, schedules })
+      body: JSON.stringify({ dailyTime, isEnabled, schedules, weeklySchedule })
     })
     if (!res.ok) throw new Error(`Failed to update scheduler config: ${res.statusText}`)
+    return res.json()
+  },
+
+  async triggerWeeklyRunNow(dayOfWeek?: string): Promise<ProcessHistoryItem> {
+    const res = await fetch(`/api/scheduler/run-weekly?_t=${Date.now()}`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      body: JSON.stringify({ dayOfWeek })
+    })
+    if (!res.ok) throw new Error(`Failed to trigger weekly process run: ${res.statusText}`)
     return res.json()
   },
 
