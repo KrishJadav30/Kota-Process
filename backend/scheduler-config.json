@@ -34,10 +34,10 @@
     "Label": "Weekly Schedule",
     "DayOfWeek": "Monday",
     "Time": "06:00",
-    "IsEnabled": true,
+    "IsEnabled": false,
     "DaysCount": 8
   },
   "DailyTime": "06:00",
-  "IsEnabled": true,
+  "IsEnabled": false,
   "LastUpdated": "2026-09-12T06:49:39.5593591Z"
 }
