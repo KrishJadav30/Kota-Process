@@ -363,8 +363,18 @@ RawCalc AS (
             WHEN a.CalcPunches IN (1, 3) THEN '*' 
             ELSE '' 
         END,
-        H1 = CASE WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 ELSE 0 END,
-        H2 = CASE WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 ELSE 0 END
+        H1 = CASE 
+            WHEN a.NewArr > 0 AND a.NewDep > 0 THEN 1 
+            WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
+            WHEN a.NewArr > 0 AND a.NewBIn > 0 THEN 1 
+            ELSE 0 
+        END,
+        H2 = CASE 
+            WHEN a.NewArr > 0 AND a.NewDep > 0 THEN 1 
+            WHEN a.NewBOut > 0 AND a.NewDep > 0 THEN 1 
+            WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
+            ELSE 0 
+        END
     FROM PreCalc a
 )
 SELECT 
@@ -381,7 +391,8 @@ SELECT
     presabs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN 'P P'
+                WHEN rc.NewArr > 0 THEN 'P P'
+                WHEN rc.NewArrNA > 0 THEN 'A P'
                 WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 'A P'
                 ELSE 'A A' 
             END
@@ -393,7 +404,8 @@ SELECT
     present = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN 1.0
+                WHEN rc.NewArr > 0 THEN 1.0
+                WHEN rc.NewArrNA > 0 THEN 0.5
                 WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 0.5
                 ELSE 0.0 
             END
@@ -405,7 +417,8 @@ SELECT
     wrkhrs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN rc.f_half + rc.s_half 
+                WHEN rc.NewArr > 0 THEN rc.f_half + rc.s_half 
+                WHEN rc.NewArrNA > 0 THEN rc.s_half
                 WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN rc.s_half
                 ELSE 0.0 
             END
