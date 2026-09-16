@@ -21,7 +21,7 @@ public class EnvService : IEnvService
     private readonly ILogger<EnvService> _logger;
 
     public int FrontendPort { get; private set; } = 5173;
-    public int BackendPort { get; private set; } = 5001;
+    public int BackendPort { get; private set; } = 5005;
     public string DbServer { get; private set; } = "192.168.1.25";
     public string DbUser { get; private set; } = "sa";
     public string DbPassword { get; private set; } = "Print@123";
@@ -42,7 +42,7 @@ public class EnvService : IEnvService
     public static (int backendPort, string logsDir, string envFile) LoadEarlyConfig()
     {
         var (envPath, logsDir) = FindRootPaths();
-        int port = 5001;
+        int port = 5005;
 
         if (File.Exists(envPath))
         {

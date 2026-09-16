@@ -1,5 +1,53 @@
 [
   {
+    "Id": "5b61712a03484d83939667fd87128f83",
+    "ProcessDate": "2026-10-01 to 2026-10-31",
+    "ExecutedAt": "2026-09-16T06:22:00.4012472Z",
+    "Status": "Success",
+    "DurationMs": 100,
+    "RowsUpdated": 124,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 11:52:00 AM. Completed in 100ms. Updated 124 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "63c32993c8e8414787d3e99d056eba32",
+    "ProcessDate": "2026-09-16",
+    "ExecutedAt": "2026-09-16T06:21:56.8628671Z",
+    "Status": "Success",
+    "DurationMs": 371,
+    "RowsUpdated": 0,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 11:51:57 AM. Completed in 371ms. Updated 0 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "33ad1d3915e642a3a63cc5423480c9c2",
+    "ProcessDate": "2026-09-16",
+    "ExecutedAt": "2026-09-16T06:21:19.7073355Z",
+    "Status": "Success",
+    "DurationMs": 404,
+    "RowsUpdated": 0,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 11:51:20 AM. Completed in 404ms. Updated 0 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "4e8760e690694fc7b21e2d9f5770ef42",
+    "ProcessDate": "2026-10-01 to 2026-10-31",
+    "ExecutedAt": "2026-09-16T06:09:41.2518404Z",
+    "Status": "Success",
+    "DurationMs": 553,
+    "RowsUpdated": 124,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 11:39:41 AM. Completed in 553ms. Updated 124 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "b341d07f7e4448b09beae05d3a43835e",
     "ProcessDate": "2026-09-05 to 2026-09-12",
     "ExecutedAt": "2026-09-12T06:45:02.6513672Z",

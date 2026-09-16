@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, rootEnvDir, '')
 
   const frontendPort = parseInt(env.FRONTEND_PORT || '5173', 10)
-  const backendPort = parseInt(env.BACKEND_PORT || '5001', 10)
+  const backendPort = parseInt(env.BACKEND_PORT || '5005', 10)
 
   console.log(`[Vite] Loaded root .env -> FRONTEND_PORT=${frontendPort}, BACKEND_PORT=${backendPort}`)
 

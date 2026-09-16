@@ -30,7 +30,7 @@ if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
 :: Read Dynamic Ports from root .env file
 :: ===============================================================================
 set "FRONTEND_PORT=5173"
-set "BACKEND_PORT=5001"
+set "BACKEND_PORT=5005"
 
 if exist "%PROJECT_DIR%\.env" (
     for /f "usebackq eol=# tokens=1* delims==" %%A in ("%PROJECT_DIR%\.env") do (
@@ -67,11 +67,7 @@ echo [1/4] Checking and freeing ports !BACKEND_PORT! [Backend] and !FRONTEND_POR
 call :FREE_PORT "!BACKEND_PORT!"
 call :FREE_PORT "!FRONTEND_PORT!"
 
-:: Safety cleanup: If ports changed from defaults (5001 / 5173), also ensure defaults are free
-if not "!BACKEND_PORT!"=="5001" call :FREE_PORT "5001"
-if not "!FRONTEND_PORT!"=="5173" call :FREE_PORT "5173"
-
-:: Terminate any active or orphaned KotaProcess.Api process
+:: Terminate any active or orphaned KotaProcess.Api processes
 taskkill /F /IM KotaProcess.Api.exe >nul 2>&1
 
 :: Wait 1 second to ensure ports are completely released by OS
@@ -127,7 +123,7 @@ if not "%TARGET_PORT%"=="" (
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr /c:":%TARGET_PORT% " ^| findstr LISTENING') do (
         if not "%%a"=="" if not "%%a"=="0" (
             echo       Releasing port %TARGET_PORT% - PID %%a
-            taskkill /F /PID %%a >nul 2>&1
+            taskkill /F /T /PID %%a >nul 2>&1
         )
     )
 )

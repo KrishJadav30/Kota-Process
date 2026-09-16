@@ -1,5 +1,38 @@
 [
   {
+    "Id": "c6907872002e41a7b2eb544ab25546ca",
+    "ProcessDate": "2026-09-16",
+    "ExecutedAt": "2026-09-16T06:22:05.1529186Z",
+    "Status": "Success",
+    "DurationMs": 86,
+    "RowsUpdated": 0,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 11:52:05 AM. Completed in 86ms. Updated 0 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "e0e5c589ef9f454ea129769494f991e0",
+    "ProcessDate": "2026-10-01 to 2026-10-31",
+    "ExecutedAt": "2026-09-16T06:10:40.5803337Z",
+    "Status": "Success",
+    "DurationMs": 70,
+    "RowsUpdated": 7,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 11:40:40 AM. Completed in 70ms. Updated 7 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "24f11c26cee34d5aa2314a16c4e63683",
+    "ProcessDate": "2026-10-01 to 2026-10-31",
+    "ExecutedAt": "2026-09-16T06:10:23.2381794Z",
+    "Status": "Success",
+    "DurationMs": 159,
+    "RowsUpdated": 7,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 11:40:23 AM. Completed in 159ms. Updated 7 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "bc07600a37c04af1949ffd3e90afe476",
     "ProcessDate": "2026-09-11",
     "ExecutedAt": "2026-09-11T10:03:49.9086716Z",

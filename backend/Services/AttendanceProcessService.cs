@@ -165,8 +165,8 @@ FROM (
 
 CREATE CLUSTERED INDEX IDX_DateRange ON #DateRange(DailyDate);
 
--- Step 2: Get all employees rostered in MonthShift or active (No check on empmst.entry)
-SELECT DISTINCT e.empcode AS EmpCode
+-- Step 2: Get all employees rostered in MonthShift or active (Check empmst.entry)
+SELECT DISTINCT e.empcode AS EmpCode, ISNULL(e.entry, 0) AS EmpMstEntry
 INTO #ActiveEmployees
 FROM dbo.empmst e
 WHERE EXISTS (
@@ -183,11 +183,12 @@ WHERE EXISTS (
 
 CREATE CLUSTERED INDEX IDX_ActiveEmployees ON #ActiveEmployees(EmpCode);
 
--- Step 3: Shift assignments from MonthShift D1-D31 joined with instshft (EmpEntry always 4.0)
+-- Step 3: Shift assignments from MonthShift D1-D31 joined with instshft (EmpEntry = 1.0 for entry 1, 4.0 for others)
 SELECT 
     ae.EmpCode,
     d.DailyDate,
-    CAST(4.0 AS real) AS EmpEntry, -- Always 4 for all employees
+    ae.EmpMstEntry,
+    CAST(CASE WHEN ae.EmpMstEntry = 1 THEN 1.0 ELSE 4.0 END AS real) AS EmpEntry,
     ShiftCode = CASE DAY(d.DailyDate)
         WHEN 1 THEN ms.d1   WHEN 2 THEN ms.d2   WHEN 3 THEN ms.d3   WHEN 4 THEN ms.d4
         WHEN 5 THEN ms.d5   WHEN 6 THEN ms.d6   WHEN 7 THEN ms.d7   WHEN 8 THEN ms.d8
@@ -312,7 +313,7 @@ AggregatedSlots AS (
     SELECT 
         es.EmpCode, 
         CAST(es.DailyDate AS DATETIME) AS DailyDate, 
-        es.ShiftCode, es.EmpEntry, es.Yr, es.Month, es.f_half, es.s_half,
+        es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Yr, es.Month, es.f_half, es.s_half,
         NewArr    = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR'     THEN ps.DecTime END), 0.0),
         NewArrNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR_NA'  THEN ps.DecTime END), 0.0),
         NewBOut   = ISNULL(MAX(CASE WHEN ps.Slot = 'BOUT'    THEN ps.DecTime END), 0.0),
@@ -323,14 +324,23 @@ AggregatedSlots AS (
         NewDepNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP_NA'  THEN ps.DecTime END), 0.0)
     FROM #EmpShifts es
     LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
-    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.Yr, es.Month, es.f_half, es.s_half
+    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Yr, es.Month, es.f_half, es.s_half
 ),
 RawCalc AS (
     SELECT 
-        a.EmpCode, a.DailyDate, a.ShiftCode, a.EmpEntry, a.Yr, a.Month, a.f_half, a.s_half,
+        a.EmpCode, a.DailyDate, a.ShiftCode, a.EmpEntry, a.EmpMstEntry, a.Yr, a.Month, a.f_half, a.s_half,
         a.NewArr, a.NewArrNA, a.NewDep, a.NewDepNA, a.NewBOut, a.NewBOutNA, a.NewBIn, a.NewBInNA,
+        HasAnyPunch = CASE 
+            WHEN a.NewArr > 0 OR a.NewArrNA > 0 OR a.NewDep > 0 OR a.NewDepNA > 0 
+              OR a.NewBOut > 0 OR a.NewBOutNA > 0 OR a.NewBIn > 0 OR a.NewBInNA > 0 
+            THEN 1 ELSE 0 
+        END,
         CalculatedEntry = CAST((CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END) AS real),
-        NewCHQ = CASE WHEN ((CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END)) IN (1, 3) THEN '*' ELSE '' END,
+        NewCHQ = CASE 
+            WHEN a.EmpMstEntry = 1 THEN ''
+            WHEN ((CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END)) IN (1, 3) THEN '*' 
+            ELSE '' 
+        END,
         H1 = CASE WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 ELSE 0 END,
         H2 = CASE WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 ELSE 0 END
     FROM AggregatedSlots a
@@ -338,17 +348,24 @@ RawCalc AS (
 SELECT 
     rc.EmpCode, rc.DailyDate, rc.ShiftCode, rc.EmpEntry, rc.Yr, rc.Month,
     rc.NewArr, rc.NewArrNA, rc.NewDep, rc.NewDepNA, rc.NewBOut, rc.NewBOutNA, rc.NewBIn, rc.NewBInNA,
-    rc.CalculatedEntry,
+    FinalEntry = CASE 
+        WHEN rc.EmpMstEntry = 1 THEN 
+            CASE WHEN rc.CalculatedEntry > 0 THEN rc.CalculatedEntry WHEN rc.HasAnyPunch = 1 THEN 1.0 ELSE 0.0 END
+        ELSE rc.CalculatedEntry 
+    END,
     rc.NewCHQ,
     rc.H1,
     rc.H2,
     presabs = CASE 
+        WHEN rc.EmpMstEntry = 1 THEN 
+            CASE WHEN rc.HasAnyPunch = 1 THEN 'P P' ELSE 'A A' END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 'P P'
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN 'P A'
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN 'A P'
         ELSE 'A A' 
     END,
     present = CASE 
+        WHEN rc.EmpMstEntry = 1 THEN 1.0
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 1.0
         WHEN rc.H1 = 0 AND rc.H2 = 0 THEN 1.0
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN 0.5
@@ -356,6 +373,8 @@ SELECT
         ELSE 0.0 
     END,
     wrkhrs = CASE 
+        WHEN rc.EmpMstEntry = 1 THEN 
+            CASE WHEN rc.HasAnyPunch = 1 THEN rc.f_half + rc.s_half ELSE 0.0 END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN rc.f_half + rc.s_half
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN rc.f_half
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN rc.s_half
@@ -378,7 +397,7 @@ SET
     m.actrt_oNA = t.NewBOutNA,
     m.actrt_i   = t.NewBIn, 
     m.actrt_iNA = t.NewBInNA,
-    m.entry     = t.CalculatedEntry,
+    m.entry     = t.FinalEntry,
     m.entreq    = t.EmpEntry,
     m.chq       = t.NewCHQ,
     m.presabs   = t.presabs,
@@ -398,7 +417,7 @@ INSERT INTO dbo.MonthTrns (
     Yr, Month, upd_date
 )
 SELECT 
-    t.EmpCode, t.DailyDate, t.ShiftCode, t.CalculatedEntry, t.EmpEntry,
+    t.EmpCode, t.DailyDate, t.ShiftCode, t.FinalEntry, t.EmpEntry,
     t.NewArr, t.NewArrNA, t.NewBOut, t.NewBOutNA, t.NewBIn, t.NewBInNA, t.NewDep, t.NewDepNA,
     0.0, 0.0, 0.0, t.wrkhrs, 0.0, t.present, t.presabs, t.NewCHQ,
     t.Yr, t.Month, SYSDATETIME()
