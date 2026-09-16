@@ -358,23 +358,35 @@ SELECT
     rc.H2,
     presabs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
-            CASE WHEN rc.HasAnyPunch = 1 THEN 'P P' ELSE 'A A' END
+            CASE 
+                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN 'P P'
+                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 'A P'
+                ELSE 'A A' 
+            END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 'P P'
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN 'P A'
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN 'A P'
         ELSE 'A A' 
     END,
     present = CASE 
-        WHEN rc.EmpMstEntry = 1 THEN 1.0
+        WHEN rc.EmpMstEntry = 1 THEN 
+            CASE 
+                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN 1.0
+                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 0.5
+                ELSE 0.0 
+            END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 1.0
-        WHEN rc.H1 = 0 AND rc.H2 = 0 THEN 1.0
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN 0.5
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN 0.5
         ELSE 0.0 
     END,
     wrkhrs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
-            CASE WHEN rc.HasAnyPunch = 1 THEN rc.f_half + rc.s_half ELSE 0.0 END
+            CASE 
+                WHEN rc.NewArr > 0 OR rc.NewArrNA > 0 THEN rc.f_half + rc.s_half 
+                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN rc.s_half
+                ELSE 0.0 
+            END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN rc.f_half + rc.s_half
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN rc.f_half
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN rc.s_half

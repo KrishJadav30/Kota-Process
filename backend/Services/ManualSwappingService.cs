@@ -270,7 +270,11 @@ SET
     
     m.presabs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
-            CASE WHEN t.HasAnyPunch = 1 THEN 'P P' ELSE 'A A' END
+            CASE 
+                WHEN t.NewArr > 0 OR t.NewArrNA > 0 THEN 'P P'
+                WHEN t.NewBIn > 0 OR t.NewBInNA > 0 THEN 'A P'
+                ELSE 'A A' 
+            END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 'P P' 
         WHEN t.H1 = 1 AND t.H2 = 0 THEN 'P A' 
         WHEN t.H1 = 0 AND t.H2 = 1 THEN 'A P' 
@@ -278,7 +282,12 @@ SET
     END,
         
     m.present = CASE 
-        WHEN t.EmpMstEntry = 1 THEN 1.0
+        WHEN t.EmpMstEntry = 1 THEN 
+            CASE 
+                WHEN t.NewArr > 0 OR t.NewArrNA > 0 THEN 1.0
+                WHEN t.NewBIn > 0 OR t.NewBInNA > 0 THEN 0.5
+                ELSE 0.0 
+            END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 1.0  
         WHEN t.H1 = 1 AND t.H2 = 0 THEN 0.5  
         WHEN t.H1 = 0 AND t.H2 = 1 THEN 0.5  
@@ -288,7 +297,11 @@ SET
     -- Update working hours based on presence status
     m.wrkhrs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
-            CASE WHEN t.HasAnyPunch = 1 THEN t.f_half + t.s_half ELSE 0 END
+            CASE 
+                WHEN t.NewArr > 0 OR t.NewArrNA > 0 THEN t.f_half + t.s_half 
+                WHEN t.NewBIn > 0 OR t.NewBInNA > 0 THEN t.s_half
+                ELSE 0 
+            END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN t.f_half + t.s_half  -- P P
         WHEN t.H1 = 1 AND t.H2 = 0 THEN t.f_half             -- P A
         WHEN t.H1 = 0 AND t.H2 = 1 THEN t.s_half             -- A P
