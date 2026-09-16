@@ -392,8 +392,7 @@ SELECT
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
                 WHEN rc.NewArr > 0 THEN 'P P'
-                WHEN rc.NewArrNA > 0 THEN 'A P'
-                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 'A P'
+                WHEN rc.NewBIn > 0 THEN 'A P'
                 ELSE 'A A' 
             END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 'P P'
@@ -405,8 +404,7 @@ SELECT
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
                 WHEN rc.NewArr > 0 THEN 1.0
-                WHEN rc.NewArrNA > 0 THEN 0.5
-                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN 0.5
+                WHEN rc.NewBIn > 0 THEN 0.5
                 ELSE 0.0 
             END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 1.0
@@ -418,8 +416,7 @@ SELECT
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
                 WHEN rc.NewArr > 0 THEN rc.f_half + rc.s_half 
-                WHEN rc.NewArrNA > 0 THEN rc.s_half
-                WHEN rc.NewBIn > 0 OR rc.NewBInNA > 0 THEN rc.s_half
+                WHEN rc.NewBIn > 0 THEN rc.s_half
                 ELSE 0.0 
             END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN rc.f_half + rc.s_half

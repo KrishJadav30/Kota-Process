@@ -1,5 +1,38 @@
 [
   {
+    "Id": "7d1c34cd8e194a149b63242b798cf33a",
+    "ProcessDate": "2026-09-16 to 2026-10-31",
+    "ExecutedAt": "2026-09-16T12:03:02.5911502Z",
+    "Status": "Success",
+    "DurationMs": 85,
+    "RowsUpdated": 7,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 05:33:02 PM. Completed in 85ms. Updated 7 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "576194d4964c473f93cf32f3f9e06d98",
+    "ProcessDate": "2026-09-01 to 2026-09-16",
+    "ExecutedAt": "2026-09-16T11:59:17.0789247Z",
+    "Status": "Success",
+    "DurationMs": 671,
+    "RowsUpdated": 0,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 05:29:17 PM. Completed in 671ms. Updated 0 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "d1b59adc51ce4cbb97e684842962d529",
+    "ProcessDate": "2026-09-01 to 2026-09-16",
+    "ExecutedAt": "2026-09-16T11:57:43.5327464Z",
+    "Status": "Failed",
+    "DurationMs": 29,
+    "RowsUpdated": 0,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 05:27:43 PM. Manual swapping execution failed: Invalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.",
+    "ErrorMessage": "Invalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027.\r\nInvalid column name \u0027CalcPunches\u0027."
+  },
+  {
     "Id": "c6907872002e41a7b2eb544ab25546ca",
     "ProcessDate": "2026-09-16",
     "ExecutedAt": "2026-09-16T06:22:05.1529186Z",
