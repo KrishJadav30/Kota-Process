@@ -166,7 +166,7 @@ FROM (
 CREATE CLUSTERED INDEX IDX_DateRange ON #DateRange(DailyDate);
 
 -- Step 2: Get all employees rostered in MonthShift or active (Check empmst.entry)
-SELECT DISTINCT e.empcode AS EmpCode, ISNULL(e.entry, 0) AS EmpMstEntry
+SELECT DISTINCT e.empcode AS EmpCode, ISNULL(e.entry, 0) AS EmpMstEntry, CAST(ISNULL(e.location, '0') AS VARCHAR(50)) AS Location
 INTO #ActiveEmployees
 FROM dbo.empmst e
 WHERE EXISTS (
@@ -188,6 +188,7 @@ SELECT
     ae.EmpCode,
     d.DailyDate,
     ae.EmpMstEntry,
+    ae.Location,
     CAST(CASE WHEN ae.EmpMstEntry = 1 THEN 1.0 ELSE 4.0 END AS real) AS EmpEntry,
     ShiftCode = CASE DAY(d.DailyDate)
         WHEN 1 THEN ms.d1   WHEN 2 THEN ms.d2   WHEN 3 THEN ms.d3   WHEN 4 THEN ms.d4
@@ -313,7 +314,7 @@ AggregatedSlots AS (
     SELECT 
         es.EmpCode, 
         CAST(es.DailyDate AS DATETIME) AS DailyDate, 
-        es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Yr, es.Month, es.f_half, es.s_half,
+        es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
         NewArr    = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR'     THEN ps.DecTime END), 0.0),
         NewArrNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR_NA'  THEN ps.DecTime END), 0.0),
         NewBOut   = ISNULL(MAX(CASE WHEN ps.Slot = 'BOUT'    THEN ps.DecTime END), 0.0),
@@ -324,26 +325,47 @@ AggregatedSlots AS (
         NewDepNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP_NA'  THEN ps.DecTime END), 0.0)
     FROM #EmpShifts es
     LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
-    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Yr, es.Month, es.f_half, es.s_half
+    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half
+),
+PreCalc AS (
+    SELECT 
+        a.*,
+        CalcPunches = (CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END)
+    FROM AggregatedSlots a
 ),
 RawCalc AS (
     SELECT 
-        a.EmpCode, a.DailyDate, a.ShiftCode, a.EmpEntry, a.EmpMstEntry, a.Yr, a.Month, a.f_half, a.s_half,
+        a.EmpCode, a.DailyDate, a.ShiftCode, 
+        EmpEntry = CASE 
+            WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1.0
+            WHEN a.Location = '6028' THEN 4.0
+            ELSE a.EmpEntry
+        END,
+        EmpMstEntry = CASE 
+            WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1
+            WHEN a.Location = '6028' THEN 4
+            ELSE a.EmpMstEntry
+        END,
+        a.Yr, a.Month, a.f_half, a.s_half,
         a.NewArr, a.NewArrNA, a.NewDep, a.NewDepNA, a.NewBOut, a.NewBOutNA, a.NewBIn, a.NewBInNA,
         HasAnyPunch = CASE 
             WHEN a.NewArr > 0 OR a.NewArrNA > 0 OR a.NewDep > 0 OR a.NewDepNA > 0 
               OR a.NewBOut > 0 OR a.NewBOutNA > 0 OR a.NewBIn > 0 OR a.NewBInNA > 0 
             THEN 1 ELSE 0 
         END,
-        CalculatedEntry = CAST((CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END) AS real),
+        CalculatedEntry = CAST(a.CalcPunches AS real),
         NewCHQ = CASE 
-            WHEN a.EmpMstEntry = 1 THEN ''
-            WHEN ((CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END)) IN (1, 3) THEN '*' 
+            WHEN (CASE 
+                    WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1
+                    WHEN a.Location = '6028' THEN 4
+                    ELSE a.EmpMstEntry
+                  END) = 1 THEN ''
+            WHEN a.CalcPunches IN (1, 3) THEN '*' 
             ELSE '' 
         END,
         H1 = CASE WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 ELSE 0 END,
         H2 = CASE WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 ELSE 0 END
-    FROM AggregatedSlots a
+    FROM PreCalc a
 )
 SELECT 
     rc.EmpCode, rc.DailyDate, rc.ShiftCode, rc.EmpEntry, rc.Yr, rc.Month,

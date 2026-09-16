@@ -144,6 +144,7 @@ WITH RawCalc AS (
         m.EmpCode, 
         m.DailyDate,
         ISNULL(e.entry, 0) AS EmpMstEntry,
+        CAST(ISNULL(e.location, '0') AS VARCHAR(50)) AS Location,
         NewArr = CASE 
             WHEN m.arrtime > 0 AND m.arrtime BETWEEN s.ShfInPunchStart AND s.ShfInPunchEnd THEN m.arrtime 
             WHEN m.ArrtimeNA > 0 AND m.ArrtimeNA BETWEEN s.ShfInPunchStart AND s.ShfInPunchEnd THEN m.ArrtimeNA 
@@ -200,9 +201,23 @@ WITH RawCalc AS (
     LEFT JOIN dbo.empmst e ON m.EmpCode = e.empcode
     WHERE m.DailyDate >= CAST(@FromDate AS DATETIME) 
       AND m.DailyDate < DATEADD(DAY, 1, CAST(@ToDate AS DATETIME))
+),
+PreCalc AS (
+    SELECT 
+        *,
+        CalcPunches = (CASE WHEN NewArr > 0 THEN 1 ELSE 0 END) + 
+                      (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
+                      (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
+                      (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END)
+    FROM RawCalc
 )
 SELECT 
-    EmpCode, DailyDate, EmpMstEntry,
+    EmpCode, DailyDate, 
+    EmpMstEntry = CASE 
+        WHEN Location = '6028' AND CalcPunches = 1 THEN 1
+        WHEN Location = '6028' THEN 2
+        ELSE EmpMstEntry
+    END,
     NewArr, NewArrNA, NewDep, NewDepNA, NewBOut, NewBOutNA, NewBIn, NewBInNA, f_half, s_half,
     
     HasAnyPunch = CASE 
@@ -212,19 +227,16 @@ SELECT
     END,
 
     -- Calculate entry count (0 to 4)
-    CalculatedEntry = (CASE WHEN NewArr > 0 THEN 1 ELSE 0 END) + 
-                      (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
-                      (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
-                      (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END),
+    CalculatedEntry = CalcPunches,
     
     -- Check if it's 1 or 3 for the CHQ column
     NewCHQ = CASE 
-        WHEN EmpMstEntry = 1 THEN ''
-        WHEN ((CASE WHEN NewArr > 0 THEN 1 ELSE 0 END) + 
-              (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
-              (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
-              (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END)) IN (1, 3) 
-        THEN '*' ELSE '' 
+        WHEN (CASE 
+                WHEN Location = '6028' AND CalcPunches = 1 THEN 1
+                WHEN Location = '6028' THEN 2
+                ELSE EmpMstEntry
+              END) = 1 THEN ''
+        WHEN CalcPunches IN (1, 3) THEN '*' ELSE '' 
     END,
     
     -- Evaluate H1 (First Half) strictly using Entry 2 Rules
