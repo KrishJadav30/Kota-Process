@@ -145,6 +145,8 @@ WITH RawCalc AS (
         m.DailyDate,
         ISNULL(e.entry, 0) AS EmpMstEntry,
         CAST(ISNULL(e.location, '0') AS VARCHAR(50)) AS Location,
+        RawArr = m.arrtime,
+        RawBIn = m.actrt_i,
         NewArr = CASE 
             WHEN m.arrtime > 0 AND m.arrtime BETWEEN s.ShfInPunchStart AND s.ShfInPunchEnd THEN m.arrtime 
             WHEN m.ArrtimeNA > 0 AND m.ArrtimeNA BETWEEN s.ShfInPunchStart AND s.ShfInPunchEnd THEN m.ArrtimeNA 
@@ -218,6 +220,7 @@ SELECT
         WHEN Location = '6028' THEN 2
         ELSE EmpMstEntry
     END,
+    RawArr, RawBIn,
     NewArr, NewArrNA, NewDep, NewDepNA, NewBOut, NewBOutNA, NewBIn, NewBInNA, f_half, s_half,
     
     HasAnyPunch = CASE 
@@ -283,8 +286,8 @@ SET
     m.presabs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.NewArr > 0 THEN 'P P'
-                WHEN t.NewBIn > 0 THEN 'A P'
+                WHEN t.RawArr > 0 THEN 'P P'
+                WHEN t.RawBIn > 0 THEN 'A P'
                 ELSE 'A A' 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 'P P' 
@@ -296,8 +299,8 @@ SET
     m.present = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.NewArr > 0 THEN 1.0
-                WHEN t.NewBIn > 0 THEN 0.5
+                WHEN t.RawArr > 0 THEN 1.0
+                WHEN t.RawBIn > 0 THEN 0.5
                 ELSE 0.0 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 1.0  
@@ -310,8 +313,8 @@ SET
     m.wrkhrs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.NewArr > 0 THEN t.f_half + t.s_half 
-                WHEN t.NewBIn > 0 THEN t.s_half
+                WHEN t.RawArr > 0 THEN t.f_half + t.s_half 
+                WHEN t.RawBIn > 0 THEN t.s_half
                 ELSE 0 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN t.f_half + t.s_half  -- P P
