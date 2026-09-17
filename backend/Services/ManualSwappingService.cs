@@ -198,6 +198,8 @@ WITH RawCalc AS (
         s.f_half, 
         s.s_half,
         ISNULL(s.ShfInPunchStart, 0.0) AS ShfInPunchStart,
+        ISNULL(s.ShfInPunchEnd, 0.0) AS ShfInPunchEnd,
+        ISNULL(s.ShfOutPunchStart, 0.0) AS ShfOutPunchStart,
         ISNULL(s.ShfOutPunchEnd, 0.0) AS ShfOutPunchEnd
         
     FROM dbo.MonthTrns m
@@ -213,19 +215,46 @@ PreCalc AS (
                       (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END),
-        DiffLate = CASE 
-            WHEN NewArr = 0 AND NewArrNA > 0 AND ShfInPunchStart > 0 
-            THEN (CAST(FLOOR(ShfInPunchStart) AS INT)*60 + CAST(ROUND((ShfInPunchStart - FLOOR(ShfInPunchStart))*100.0, 0) AS INT))
-               - (CAST(FLOOR(NewArrNA) AS INT)*60 + CAST(ROUND((NewArrNA - FLOOR(NewArrNA))*100.0, 0) AS INT))
+        LatePosMin = CASE 
+            WHEN NewArr = 0 AND NewBOutNA > 0 AND ShfInPunchEnd > 0 
+            THEN (CAST(FLOOR(NewBOutNA) AS INT)*60 + CAST(ROUND((NewBOutNA - FLOOR(NewBOutNA))*100.0, 0) AS INT))
+               - (CAST(FLOOR(ShfInPunchEnd) AS INT)*60 + CAST(ROUND((ShfInPunchEnd - FLOOR(ShfInPunchEnd))*100.0, 0) AS INT))
             ELSE 0 
         END,
-        DiffEarl = CASE 
+        LateNegMin = CASE 
+            WHEN NewArr = 0 AND NewArrNA > 0 AND ShfInPunchStart > 0 
+            THEN (CAST(FLOOR(NewArrNA) AS INT)*60 + CAST(ROUND((NewArrNA - FLOOR(NewArrNA))*100.0, 0) AS INT))
+               - (CAST(FLOOR(ShfInPunchStart) AS INT)*60 + CAST(ROUND((ShfInPunchStart - FLOOR(ShfInPunchStart))*100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        EarlPosMin = CASE 
+            WHEN NewDep = 0 AND NewBInNA > 0 AND ShfOutPunchStart > 0 
+            THEN (CAST(FLOOR(ShfOutPunchStart) AS INT)*60 + CAST(ROUND((ShfOutPunchStart - FLOOR(ShfOutPunchStart))*100.0, 0) AS INT))
+               - (CAST(FLOOR(NewBInNA) AS INT)*60 + CAST(ROUND((NewBInNA - FLOOR(NewBInNA))*100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        EarlNegMin = CASE 
             WHEN NewDep = 0 AND NewDepNA > 0 AND ShfOutPunchEnd > 0 
-            THEN (CAST(FLOOR(NewDepNA) AS INT)*60 + CAST(ROUND((NewDepNA - FLOOR(NewDepNA))*100.0, 0) AS INT))
-               - (CAST(FLOOR(ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((ShfOutPunchEnd - FLOOR(ShfOutPunchEnd))*100.0, 0) AS INT))
+            THEN (CAST(FLOOR(ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((ShfOutPunchEnd - FLOOR(ShfOutPunchEnd))*100.0, 0) AS INT))
+               - (CAST(FLOOR(NewDepNA) AS INT)*60 + CAST(ROUND((NewDepNA - FLOOR(NewDepNA))*100.0, 0) AS INT))
             ELSE 0 
         END
     FROM RawCalc
+),
+DiffCalc AS (
+    SELECT 
+        p.*,
+        DiffLate = CASE 
+            WHEN p.LatePosMin > 0 THEN p.LatePosMin 
+            WHEN p.LateNegMin != 0 THEN -1 * ABS(p.LateNegMin)
+            ELSE 0 
+        END,
+        DiffEarl = CASE 
+            WHEN p.EarlPosMin > 0 THEN p.EarlPosMin 
+            WHEN p.EarlNegMin != 0 THEN -1 * ABS(p.EarlNegMin)
+            ELSE 0 
+        END
+    FROM PreCalc p
 )
 SELECT 
     EmpCode, DailyDate, 
@@ -283,7 +312,7 @@ SELECT
         ELSE CAST(-1.0 * ((ABS(DiffEarl) / 60) + ((ABS(DiffEarl) % 60) / 100.0)) AS real)
     END
 INTO #TempUpdates
-FROM PreCalc;
+FROM DiffCalc;
 
 -- Step 3: Add an index to the temp table to ensure the final UPDATE happens instantly
 CREATE CLUSTERED INDEX IDX_TempUpdates ON #TempUpdates(EmpCode, DailyDate);
