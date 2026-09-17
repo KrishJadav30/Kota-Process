@@ -197,6 +197,8 @@ WITH RawCalc AS (
         
         s.f_half, 
         s.s_half,
+        ISNULL(s.shf_in, 0.0) AS shf_in,
+        ISNULL(s.shf_out, 0.0) AS shf_out,
         ISNULL(s.ShfInPunchStart, 0.0) AS ShfInPunchStart,
         ISNULL(s.ShfInPunchEnd, 0.0) AS ShfInPunchEnd,
         ISNULL(s.ShfOutPunchStart, 0.0) AS ShfOutPunchStart,
@@ -215,45 +217,23 @@ PreCalc AS (
                       (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END),
-        LatePosMin = CASE 
-            WHEN NewArr = 0 AND NewBOutNA > 0 AND ShfInPunchEnd > 0 
-            THEN (CAST(FLOOR(NewBOutNA) AS INT)*60 + CAST(ROUND((NewBOutNA - FLOOR(NewBOutNA))*100.0, 0) AS INT))
-               - (CAST(FLOOR(ShfInPunchEnd) AS INT)*60 + CAST(ROUND((ShfInPunchEnd - FLOOR(ShfInPunchEnd))*100.0, 0) AS INT))
+        DiffLate = CASE 
+            WHEN NewArr > 0 AND shf_in > 0 
+            THEN (CAST(FLOOR(NewArr) AS INT) * 60 + CAST(ROUND((NewArr - FLOOR(NewArr)) * 100.0, 0) AS INT))
+               - (CAST(FLOOR(shf_in) AS INT) * 60 + CAST(ROUND((shf_in - FLOOR(shf_in)) * 100.0, 0) AS INT))
             ELSE 0 
         END,
-        LateNegMin = CASE 
-            WHEN NewArr = 0 AND NewArrNA > 0 AND ShfInPunchStart > 0 
-            THEN (CAST(FLOOR(NewArrNA) AS INT)*60 + CAST(ROUND((NewArrNA - FLOOR(NewArrNA))*100.0, 0) AS INT))
-               - (CAST(FLOOR(ShfInPunchStart) AS INT)*60 + CAST(ROUND((ShfInPunchStart - FLOOR(ShfInPunchStart))*100.0, 0) AS INT))
-            ELSE 0 
-        END,
-        EarlPosMin = CASE 
-            WHEN NewDep = 0 AND NewBInNA > 0 AND ShfOutPunchStart > 0 
-            THEN (CAST(FLOOR(ShfOutPunchStart) AS INT)*60 + CAST(ROUND((ShfOutPunchStart - FLOOR(ShfOutPunchStart))*100.0, 0) AS INT))
-               - (CAST(FLOOR(NewBInNA) AS INT)*60 + CAST(ROUND((NewBInNA - FLOOR(NewBInNA))*100.0, 0) AS INT))
-            ELSE 0 
-        END,
-        EarlNegMin = CASE 
-            WHEN NewDep = 0 AND NewDepNA > 0 AND ShfOutPunchEnd > 0 
-            THEN (CAST(FLOOR(ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((ShfOutPunchEnd - FLOOR(ShfOutPunchEnd))*100.0, 0) AS INT))
-               - (CAST(FLOOR(NewDepNA) AS INT)*60 + CAST(ROUND((NewDepNA - FLOOR(NewDepNA))*100.0, 0) AS INT))
+        DiffEarl = CASE 
+            WHEN NewDep > 0 AND shf_out > 0 
+            THEN (CAST(FLOOR(shf_out) AS INT) * 60 + CAST(ROUND((shf_out - FLOOR(shf_out)) * 100.0, 0) AS INT))
+               - (CAST(FLOOR(NewDep) AS INT) * 60 + CAST(ROUND((NewDep - FLOOR(NewDep)) * 100.0, 0) AS INT))
             ELSE 0 
         END
     FROM RawCalc
 ),
 DiffCalc AS (
     SELECT 
-        p.*,
-        DiffLate = CASE 
-            WHEN p.LatePosMin > 0 THEN p.LatePosMin 
-            WHEN p.LateNegMin != 0 THEN -1 * ABS(p.LateNegMin)
-            ELSE 0 
-        END,
-        DiffEarl = CASE 
-            WHEN p.EarlPosMin > 0 THEN p.EarlPosMin 
-            WHEN p.EarlNegMin != 0 THEN -1 * ABS(p.EarlNegMin)
-            ELSE 0 
-        END
+        p.*
     FROM PreCalc p
 )
 SELECT 

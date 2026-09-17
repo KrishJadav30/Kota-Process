@@ -315,6 +315,8 @@ AggregatedSlots AS (
         es.EmpCode, 
         CAST(es.DailyDate AS DATETIME) AS DailyDate, 
         es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
+        ISNULL(es.shf_in, 0.0) AS shf_in,
+        ISNULL(es.shf_out, 0.0) AS shf_out,
         ISNULL(es.ShfInPunchStart, 0.0) AS ShfInPunchStart,
         ISNULL(es.ShfInPunchEnd, 0.0) AS ShfInPunchEnd,
         ISNULL(es.ShfOutPunchStart, 0.0) AS ShfOutPunchStart,
@@ -329,34 +331,24 @@ AggregatedSlots AS (
         NewDepNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP_NA'  THEN ps.DecTime END), 0.0)
     FROM #EmpShifts es
     LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
-    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half, es.ShfInPunchStart, es.ShfInPunchEnd, es.ShfOutPunchStart, es.ShfOutPunchEnd
+    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
+             es.shf_in, es.shf_out,
+             es.ShfInPunchStart, es.ShfInPunchEnd, es.ShfOutPunchStart, es.ShfOutPunchEnd
 ),
 PreCalc AS (
     SELECT 
         a.*,
         CalcPunches = (CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END),
-        LatePosMin = CASE 
-            WHEN a.NewArr = 0 AND a.NewBOutNA > 0 AND a.ShfInPunchEnd > 0 
-            THEN (CAST(FLOOR(a.NewBOutNA) AS INT)*60 + CAST(ROUND((a.NewBOutNA - FLOOR(a.NewBOutNA))*100.0, 0) AS INT))
-               - (CAST(FLOOR(a.ShfInPunchEnd) AS INT)*60 + CAST(ROUND((a.ShfInPunchEnd - FLOOR(a.ShfInPunchEnd))*100.0, 0) AS INT))
+        DiffLate = CASE 
+            WHEN a.NewArr > 0 AND a.shf_in > 0 
+            THEN (CAST(FLOOR(a.NewArr) AS INT) * 60 + CAST(ROUND((a.NewArr - FLOOR(a.NewArr)) * 100.0, 0) AS INT))
+               - (CAST(FLOOR(a.shf_in) AS INT) * 60 + CAST(ROUND((a.shf_in - FLOOR(a.shf_in)) * 100.0, 0) AS INT))
             ELSE 0 
         END,
-        LateNegMin = CASE 
-            WHEN a.NewArr = 0 AND a.NewArrNA > 0 AND a.ShfInPunchStart > 0 
-            THEN (CAST(FLOOR(a.NewArrNA) AS INT)*60 + CAST(ROUND((a.NewArrNA - FLOOR(a.NewArrNA))*100.0, 0) AS INT))
-               - (CAST(FLOOR(a.ShfInPunchStart) AS INT)*60 + CAST(ROUND((a.ShfInPunchStart - FLOOR(a.ShfInPunchStart))*100.0, 0) AS INT))
-            ELSE 0 
-        END,
-        EarlPosMin = CASE 
-            WHEN a.NewDep = 0 AND a.NewBInNA > 0 AND a.ShfOutPunchStart > 0 
-            THEN (CAST(FLOOR(a.ShfOutPunchStart) AS INT)*60 + CAST(ROUND((a.ShfOutPunchStart - FLOOR(a.ShfOutPunchStart))*100.0, 0) AS INT))
-               - (CAST(FLOOR(a.NewBInNA) AS INT)*60 + CAST(ROUND((a.NewBInNA - FLOOR(a.NewBInNA))*100.0, 0) AS INT))
-            ELSE 0 
-        END,
-        EarlNegMin = CASE 
-            WHEN a.NewDep = 0 AND a.NewDepNA > 0 AND a.ShfOutPunchEnd > 0 
-            THEN (CAST(FLOOR(a.ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((a.ShfOutPunchEnd - FLOOR(a.ShfOutPunchEnd))*100.0, 0) AS INT))
-               - (CAST(FLOOR(a.NewDepNA) AS INT)*60 + CAST(ROUND((a.NewDepNA - FLOOR(a.NewDepNA))*100.0, 0) AS INT))
+        DiffEarl = CASE 
+            WHEN a.NewDep > 0 AND a.shf_out > 0 
+            THEN (CAST(FLOOR(a.shf_out) AS INT) * 60 + CAST(ROUND((a.shf_out - FLOOR(a.shf_out)) * 100.0, 0) AS INT))
+               - (CAST(FLOOR(a.NewDep) AS INT) * 60 + CAST(ROUND((a.NewDep - FLOOR(a.NewDep)) * 100.0, 0) AS INT))
             ELSE 0 
         END
     FROM AggregatedSlots a
@@ -364,16 +356,8 @@ PreCalc AS (
 RawCalc AS (
     SELECT 
         a.EmpCode, a.DailyDate, a.ShiftCode, 
-        DiffLate = CASE 
-            WHEN a.LatePosMin > 0 THEN a.LatePosMin 
-            WHEN a.LateNegMin != 0 THEN -1 * ABS(a.LateNegMin)
-            ELSE 0 
-        END,
-        DiffEarl = CASE 
-            WHEN a.EarlPosMin > 0 THEN a.EarlPosMin 
-            WHEN a.EarlNegMin != 0 THEN -1 * ABS(a.EarlNegMin)
-            ELSE 0 
-        END,
+        a.DiffLate,
+        a.DiffEarl,
         EmpEntry = CASE 
             WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1.0
             WHEN a.Location = '6028' THEN 4.0
