@@ -166,9 +166,14 @@ FROM (
 CREATE CLUSTERED INDEX IDX_DateRange ON #DateRange(DailyDate);
 
 -- Step 2: Get all employees rostered in MonthShift or active (Check empmst.entry)
-SELECT DISTINCT e.empcode AS EmpCode, ISNULL(e.entry, 0) AS EmpMstEntry, CAST(ISNULL(e.location, '0') AS VARCHAR(50)) AS Location
+SELECT DISTINCT 
+    e.empcode AS EmpCode, 
+    ISNULL(e.entry, 0) AS EmpMstEntry, 
+    CAST(ISNULL(e.location, '0') AS VARCHAR(50)) AS Location,
+    ISNULL(cd.lt_allow, 0.0) AS lt_allow
 INTO #ActiveEmployees
 FROM dbo.empmst e
+LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat
 WHERE EXISTS (
     SELECT 1 FROM dbo.MonthShift ms 
     JOIN #DateRange dr 
@@ -189,6 +194,7 @@ SELECT
     d.DailyDate,
     ae.EmpMstEntry,
     ae.Location,
+    ae.lt_allow,
     CAST(CASE WHEN ae.EmpMstEntry = 1 THEN 1.0 ELSE 4.0 END AS real) AS EmpEntry,
     ShiftCode = CASE DAY(d.DailyDate)
         WHEN 1 THEN ms.d1   WHEN 2 THEN ms.d2   WHEN 3 THEN ms.d3   WHEN 4 THEN ms.d4
@@ -317,6 +323,7 @@ AggregatedSlots AS (
         es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
         ISNULL(es.shf_in, 0.0) AS shf_in,
         ISNULL(es.shf_out, 0.0) AS shf_out,
+        ISNULL(es.lt_allow, 0.0) AS lt_allow,
         ISNULL(es.ShfInPunchStart, 0.0) AS ShfInPunchStart,
         ISNULL(es.ShfInPunchEnd, 0.0) AS ShfInPunchEnd,
         ISNULL(es.ShfOutPunchStart, 0.0) AS ShfOutPunchStart,
@@ -332,17 +339,22 @@ AggregatedSlots AS (
     FROM #EmpShifts es
     LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
     GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
-             es.shf_in, es.shf_out,
+             es.shf_in, es.shf_out, es.lt_allow,
              es.ShfInPunchStart, es.ShfInPunchEnd, es.ShfOutPunchStart, es.ShfOutPunchEnd
 ),
 PreCalc AS (
     SELECT 
         a.*,
         CalcPunches = (CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END),
-        DiffLate = CASE 
+        RawLateMin = CASE 
             WHEN a.NewArr > 0 AND a.shf_in > 0 
             THEN (CAST(FLOOR(a.NewArr) AS INT) * 60 + CAST(ROUND((a.NewArr - FLOOR(a.NewArr)) * 100.0, 0) AS INT))
                - (CAST(FLOOR(a.shf_in) AS INT) * 60 + CAST(ROUND((a.shf_in - FLOOR(a.shf_in)) * 100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        LtAllowMin = CASE 
+            WHEN a.lt_allow > 0 
+            THEN (CAST(FLOOR(a.lt_allow) AS INT) * 60 + CAST(ROUND((a.lt_allow - FLOOR(a.lt_allow)) * 100.0, 0) AS INT))
             ELSE 0 
         END,
         DiffEarl = CASE 
@@ -356,7 +368,10 @@ PreCalc AS (
 RawCalc AS (
     SELECT 
         a.EmpCode, a.DailyDate, a.ShiftCode, 
-        a.DiffLate,
+        DiffLate = CASE 
+            WHEN ABS(a.RawLateMin) <= a.LtAllowMin THEN 0 
+            ELSE a.RawLateMin 
+        END,
         a.DiffEarl,
         EmpEntry = CASE 
             WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1.0

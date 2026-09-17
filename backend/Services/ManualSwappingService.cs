@@ -199,6 +199,7 @@ WITH RawCalc AS (
         s.s_half,
         ISNULL(s.shf_in, 0.0) AS shf_in,
         ISNULL(s.shf_out, 0.0) AS shf_out,
+        ISNULL(cd.lt_allow, 0.0) AS lt_allow,
         ISNULL(s.ShfInPunchStart, 0.0) AS ShfInPunchStart,
         ISNULL(s.ShfInPunchEnd, 0.0) AS ShfInPunchEnd,
         ISNULL(s.ShfOutPunchStart, 0.0) AS ShfOutPunchStart,
@@ -207,6 +208,7 @@ WITH RawCalc AS (
     FROM dbo.MonthTrns m
     INNER JOIN dbo.instshft s ON m.shift = s.shift
     LEFT JOIN dbo.empmst e ON m.EmpCode = e.empcode
+    LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat
     WHERE m.DailyDate >= CAST(@FromDate AS DATETIME) 
       AND m.DailyDate < DATEADD(DAY, 1, CAST(@ToDate AS DATETIME))
 ),
@@ -217,10 +219,15 @@ PreCalc AS (
                       (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END),
-        DiffLate = CASE 
+        RawLateMin = CASE 
             WHEN NewArr > 0 AND shf_in > 0 
             THEN (CAST(FLOOR(NewArr) AS INT) * 60 + CAST(ROUND((NewArr - FLOOR(NewArr)) * 100.0, 0) AS INT))
                - (CAST(FLOOR(shf_in) AS INT) * 60 + CAST(ROUND((shf_in - FLOOR(shf_in)) * 100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        LtAllowMin = CASE 
+            WHEN lt_allow > 0 
+            THEN (CAST(FLOOR(lt_allow) AS INT) * 60 + CAST(ROUND((lt_allow - FLOOR(lt_allow)) * 100.0, 0) AS INT))
             ELSE 0 
         END,
         DiffEarl = CASE 
@@ -233,7 +240,11 @@ PreCalc AS (
 ),
 DiffCalc AS (
     SELECT 
-        p.*
+        p.*,
+        DiffLate = CASE 
+            WHEN ABS(p.RawLateMin) <= p.LtAllowMin THEN 0 
+            ELSE p.RawLateMin 
+        END
     FROM PreCalc p
 )
 SELECT 
