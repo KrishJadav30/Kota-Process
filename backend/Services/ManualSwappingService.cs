@@ -286,8 +286,8 @@ SET
     m.presabs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.RawArr > 0 THEN 'P P'
-                WHEN t.RawBIn > 0 THEN 'A P'
+                WHEN t.NewArr > 0 THEN 'P P'
+                WHEN t.NewBIn > 0 THEN 'A P'
                 ELSE 'A A' 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 'P P' 
@@ -299,8 +299,8 @@ SET
     m.present = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.RawArr > 0 THEN 1.0
-                WHEN t.RawBIn > 0 THEN 0.5
+                WHEN t.NewArr > 0 THEN 1.0
+                WHEN t.NewBIn > 0 THEN 0.5
                 ELSE 0.0 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 1.0  
@@ -313,8 +313,8 @@ SET
     m.wrkhrs = CASE 
         WHEN t.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN t.RawArr > 0 THEN t.f_half + t.s_half 
-                WHEN t.RawBIn > 0 THEN t.s_half
+                WHEN t.NewArr > 0 THEN t.f_half + t.s_half
+                WHEN t.NewBIn > 0 THEN t.s_half
                 ELSE 0 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN t.f_half + t.s_half  -- P P

@@ -415,7 +415,7 @@ SELECT
     wrkhrs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 
             CASE 
-                WHEN rc.NewArr > 0 THEN rc.f_half + rc.s_half 
+                WHEN rc.NewArr > 0 THEN rc.f_half + rc.s_half
                 WHEN rc.NewBIn > 0 THEN rc.s_half
                 ELSE 0.0 
             END
