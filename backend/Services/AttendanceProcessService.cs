@@ -315,6 +315,8 @@ AggregatedSlots AS (
         es.EmpCode, 
         CAST(es.DailyDate AS DATETIME) AS DailyDate, 
         es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
+        ISNULL(es.ShfInPunchStart, 0.0) AS ShfInPunchStart,
+        ISNULL(es.ShfOutPunchEnd, 0.0) AS ShfOutPunchEnd,
         NewArr    = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR'     THEN ps.DecTime END), 0.0),
         NewArrNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'ARR_NA'  THEN ps.DecTime END), 0.0),
         NewBOut   = ISNULL(MAX(CASE WHEN ps.Slot = 'BOUT'    THEN ps.DecTime END), 0.0),
@@ -325,17 +327,29 @@ AggregatedSlots AS (
         NewDepNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP_NA'  THEN ps.DecTime END), 0.0)
     FROM #EmpShifts es
     LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
-    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half
+    GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half, es.ShfInPunchStart, es.ShfOutPunchEnd
 ),
 PreCalc AS (
     SELECT 
         a.*,
-        CalcPunches = (CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END)
+        CalcPunches = (CASE WHEN a.NewArr > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewDep > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBOut > 0 THEN 1 ELSE 0 END) + (CASE WHEN a.NewBIn > 0 THEN 1 ELSE 0 END),
+        DiffLate = CASE 
+            WHEN a.NewArr = 0 AND a.NewArrNA > 0 AND a.ShfInPunchStart > 0 
+            THEN (CAST(FLOOR(a.ShfInPunchStart) AS INT)*60 + CAST(ROUND((a.ShfInPunchStart - FLOOR(a.ShfInPunchStart))*100.0, 0) AS INT))
+               - (CAST(FLOOR(a.NewArrNA) AS INT)*60 + CAST(ROUND((a.NewArrNA - FLOOR(a.NewArrNA))*100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        DiffEarl = CASE 
+            WHEN a.NewDep = 0 AND a.NewDepNA > 0 AND a.ShfOutPunchEnd > 0 
+            THEN (CAST(FLOOR(a.NewDepNA) AS INT)*60 + CAST(ROUND((a.NewDepNA - FLOOR(a.NewDepNA))*100.0, 0) AS INT))
+               - (CAST(FLOOR(a.ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((a.ShfOutPunchEnd - FLOOR(a.ShfOutPunchEnd))*100.0, 0) AS INT))
+            ELSE 0 
+        END
     FROM AggregatedSlots a
 ),
 RawCalc AS (
     SELECT 
-        a.EmpCode, a.DailyDate, a.ShiftCode, 
+        a.EmpCode, a.DailyDate, a.ShiftCode, a.DiffLate, a.DiffEarl, 
         EmpEntry = CASE 
             WHEN a.Location = '6028' AND a.CalcPunches = 1 THEN 1.0
             WHEN a.Location = '6028' THEN 4.0
@@ -423,6 +437,16 @@ SELECT
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN rc.f_half
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN rc.s_half
         ELSE 0.0 
+    END,
+    latehrs = CASE 
+        WHEN rc.DiffLate = 0 THEN 0.0
+        WHEN rc.DiffLate > 0 THEN CAST((rc.DiffLate / 60) + ((rc.DiffLate % 60) / 100.0) AS real)
+        ELSE CAST(-1.0 * ((ABS(rc.DiffLate) / 60) + ((ABS(rc.DiffLate) % 60) / 100.0)) AS real)
+    END,
+    earlhrs = CASE 
+        WHEN rc.DiffEarl = 0 THEN 0.0
+        WHEN rc.DiffEarl > 0 THEN CAST((rc.DiffEarl / 60) + ((rc.DiffEarl % 60) / 100.0) AS real)
+        ELSE CAST(-1.0 * ((ABS(rc.DiffEarl) / 60) + ((ABS(rc.DiffEarl) % 60) / 100.0)) AS real)
     END
 INTO #TempUpdates
 FROM RawCalc rc;
@@ -441,6 +465,8 @@ SET
     m.actrt_oNA = t.NewBOutNA,
     m.actrt_i   = t.NewBIn, 
     m.actrt_iNA = t.NewBInNA,
+    m.latehrs   = t.latehrs,
+    m.earlhrs   = t.earlhrs,
     m.entry     = t.FinalEntry,
     m.entreq    = t.EmpEntry,
     m.chq       = t.NewCHQ,
@@ -463,7 +489,7 @@ INSERT INTO dbo.MonthTrns (
 SELECT 
     t.EmpCode, t.DailyDate, t.ShiftCode, t.FinalEntry, t.EmpEntry,
     t.NewArr, t.NewArrNA, t.NewBOut, t.NewBOutNA, t.NewBIn, t.NewBInNA, t.NewDep, t.NewDepNA,
-    0.0, 0.0, 0.0, t.wrkhrs, 0.0, t.present, t.presabs, t.NewCHQ,
+    t.latehrs, t.earlhrs, 0.0, t.wrkhrs, 0.0, t.present, t.presabs, t.NewCHQ,
     t.Yr, t.Month, SYSDATETIME()
 FROM #TempUpdates t
 WHERE NOT EXISTS (

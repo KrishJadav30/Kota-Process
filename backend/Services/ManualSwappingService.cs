@@ -196,7 +196,9 @@ WITH RawCalc AS (
         END,
         
         s.f_half, 
-        s.s_half
+        s.s_half,
+        ISNULL(s.ShfInPunchStart, 0.0) AS ShfInPunchStart,
+        ISNULL(s.ShfOutPunchEnd, 0.0) AS ShfOutPunchEnd
         
     FROM dbo.MonthTrns m
     INNER JOIN dbo.instshft s ON m.shift = s.shift
@@ -210,7 +212,19 @@ PreCalc AS (
         CalcPunches = (CASE WHEN NewArr > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewDep > 0 THEN 1 ELSE 0 END) + 
                       (CASE WHEN NewBOut > 0 THEN 1 ELSE 0 END) + 
-                      (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END)
+                      (CASE WHEN NewBIn > 0 THEN 1 ELSE 0 END),
+        DiffLate = CASE 
+            WHEN NewArr = 0 AND NewArrNA > 0 AND ShfInPunchStart > 0 
+            THEN (CAST(FLOOR(ShfInPunchStart) AS INT)*60 + CAST(ROUND((ShfInPunchStart - FLOOR(ShfInPunchStart))*100.0, 0) AS INT))
+               - (CAST(FLOOR(NewArrNA) AS INT)*60 + CAST(ROUND((NewArrNA - FLOOR(NewArrNA))*100.0, 0) AS INT))
+            ELSE 0 
+        END,
+        DiffEarl = CASE 
+            WHEN NewDep = 0 AND NewDepNA > 0 AND ShfOutPunchEnd > 0 
+            THEN (CAST(FLOOR(NewDepNA) AS INT)*60 + CAST(ROUND((NewDepNA - FLOOR(NewDepNA))*100.0, 0) AS INT))
+               - (CAST(FLOOR(ShfOutPunchEnd) AS INT)*60 + CAST(ROUND((ShfOutPunchEnd - FLOOR(ShfOutPunchEnd))*100.0, 0) AS INT))
+            ELSE 0 
+        END
     FROM RawCalc
 )
 SELECT 
@@ -256,6 +270,17 @@ SELECT
         WHEN NewBOut > 0 AND NewDep > 0 THEN 1  -- Rest Out + Departure (Forms AP)
         WHEN NewBIn > 0 AND NewDep > 0 THEN 1   -- Rest In + Departure (Safety check for AP)
         ELSE 0 
+    END,
+
+    latehrs = CASE 
+        WHEN DiffLate = 0 THEN 0.0
+        WHEN DiffLate > 0 THEN CAST((DiffLate / 60) + ((DiffLate % 60) / 100.0) AS real)
+        ELSE CAST(-1.0 * ((ABS(DiffLate) / 60) + ((ABS(DiffLate) % 60) / 100.0)) AS real)
+    END,
+    earlhrs = CASE 
+        WHEN DiffEarl = 0 THEN 0.0
+        WHEN DiffEarl > 0 THEN CAST((DiffEarl / 60) + ((DiffEarl % 60) / 100.0) AS real)
+        ELSE CAST(-1.0 * ((ABS(DiffEarl) / 60) + ((ABS(DiffEarl) % 60) / 100.0)) AS real)
     END
 INTO #TempUpdates
 FROM PreCalc;
@@ -274,6 +299,8 @@ SET
     m.actrt_oNA = t.NewBOutNA,
     m.actrt_i = t.NewBIn, 
     m.actrt_iNA = t.NewBInNA,
+    m.latehrs = t.latehrs,
+    m.earlhrs = t.earlhrs,
     
     m.entreq = CASE WHEN t.EmpMstEntry = 1 THEN 1 ELSE 2 END,
     m.entry = CASE 
