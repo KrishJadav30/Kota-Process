@@ -276,19 +276,19 @@ SELECT
         WHEN CalcPunches IN (1, 3) THEN '*' ELSE '' 
     END,
     
-    -- Evaluate H1 (First Half) strictly using Entry 2 Rules
+    -- Evaluate H1 (First Half)
     H1 = CASE 
-        WHEN NewArr > 0 AND NewDep > 0 THEN 1   -- Arrival + Departure (Forms PP)
-        WHEN NewArr > 0 AND NewBOut > 0 THEN 1  -- Arrival + Rest Out (Forms PA)
-        WHEN NewArr > 0 AND NewBIn > 0 THEN 1   -- Arrival + Rest In (Safety check for PA)
+        WHEN NewArr > 0 AND NewBOut > 0 THEN 1 
+        WHEN NewArr > 0 AND NewDep > 0 AND NewBOut = 0 AND NewBIn = 0 THEN 1 
+        WHEN NewArr > 0 AND NewBIn > 0 AND NewBOut = 0 AND NewDep = 0 THEN 1 
         ELSE 0 
     END,
         
-    -- Evaluate H2 (Second Half) strictly using Entry 2 Rules
+    -- Evaluate H2 (Second Half)
     H2 = CASE 
-        WHEN NewArr > 0 AND NewDep > 0 THEN 1   -- Arrival + Departure (Forms PP)
-        WHEN NewBOut > 0 AND NewDep > 0 THEN 1  -- Rest Out + Departure (Forms AP)
-        WHEN NewBIn > 0 AND NewDep > 0 THEN 1   -- Rest In + Departure (Safety check for AP)
+        WHEN NewBIn > 0 AND NewDep > 0 THEN 1 
+        WHEN NewArr > 0 AND NewDep > 0 AND NewBOut = 0 AND NewBIn = 0 THEN 1 
+        WHEN NewBOut > 0 AND NewDep > 0 AND NewArr = 0 AND NewBIn = 0 THEN 1 
         ELSE 0 
     END,
 

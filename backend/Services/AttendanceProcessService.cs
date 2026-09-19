@@ -401,15 +401,15 @@ RawCalc AS (
             ELSE '' 
         END,
         H1 = CASE 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 THEN 1 
             WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewBIn > 0 THEN 1 
+            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
+            WHEN a.NewArr > 0 AND a.NewBIn > 0 AND a.NewBOut = 0 AND a.NewDep = 0 THEN 1 
             ELSE 0 
         END,
         H2 = CASE 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 THEN 1 
-            WHEN a.NewBOut > 0 AND a.NewDep > 0 THEN 1 
             WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
+            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
+            WHEN a.NewBOut > 0 AND a.NewDep > 0 AND a.NewArr = 0 AND a.NewBIn = 0 THEN 1 
             ELSE 0 
         END
     FROM PreCalc a
