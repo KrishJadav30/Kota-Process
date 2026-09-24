@@ -375,7 +375,35 @@ SELECT
         WHEN 1 THEN 'Jan' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Apr' 
         WHEN 5 THEN 'May' WHEN 6 THEN 'Jun' WHEN 7 THEN 'Jul' WHEN 8 THEN 'Aug' 
         WHEN 9 THEN 'Sep' WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' WHEN 12 THEN 'Dec' 
-    END AS Month
+    END AS Month,
+    Mid_Arr_BOut = CASE 
+        WHEN s.BrkOutPunchStart > 0 AND s.BrkOutPunchStart > s.ShfInPunchEnd THEN
+            CAST(((CAST(FLOOR(s.ShfInPunchEnd) AS INT)*60 + CAST(ROUND((s.ShfInPunchEnd - FLOOR(s.ShfInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkOutPunchStart) AS INT)*60 + CAST(ROUND((s.BrkOutPunchStart - FLOOR(s.BrkOutPunchStart))*100.0, 0) AS INT))/2)/60
+                 + (((CAST(FLOOR(s.ShfInPunchEnd) AS INT)*60 + CAST(ROUND((s.ShfInPunchEnd - FLOOR(s.ShfInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkOutPunchStart) AS INT)*60 + CAST(ROUND((s.BrkOutPunchStart - FLOOR(s.BrkOutPunchStart))*100.0, 0) AS INT))/2)%60)/100.0 AS real)
+        ELSE 0.0 END,
+    Mid_BOut_BIn = CASE 
+        WHEN s.BrkInPunchStart > 0 AND s.BrkOutPunchEnd > 0 AND s.BrkInPunchStart > s.BrkOutPunchEnd THEN
+            CAST(((CAST(FLOOR(s.BrkOutPunchEnd) AS INT)*60 + CAST(ROUND((s.BrkOutPunchEnd - FLOOR(s.BrkOutPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkInPunchStart) AS INT)*60 + CAST(ROUND((s.BrkInPunchStart - FLOOR(s.BrkInPunchStart))*100.0, 0) AS INT))/2)/60
+                 + (((CAST(FLOOR(s.BrkOutPunchEnd) AS INT)*60 + CAST(ROUND((s.BrkOutPunchEnd - FLOOR(s.BrkOutPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkInPunchStart) AS INT)*60 + CAST(ROUND((s.BrkInPunchStart - FLOOR(s.BrkInPunchStart))*100.0, 0) AS INT))/2)%60)/100.0 AS real)
+        ELSE 0.0 END,
+    Mid_BIn_Dep = CASE 
+        WHEN s.ShfOutPunchStart > 0 AND s.BrkInPunchEnd > 0 AND s.ShfOutPunchStart > s.BrkInPunchEnd THEN
+            CAST(((CAST(FLOOR(s.BrkInPunchEnd) AS INT)*60 + CAST(ROUND((s.BrkInPunchEnd - FLOOR(s.BrkInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.ShfOutPunchStart) AS INT)*60 + CAST(ROUND((s.ShfOutPunchStart - FLOOR(s.ShfOutPunchStart))*100.0, 0) AS INT))/2)/60
+                 + (((CAST(FLOOR(s.BrkInPunchEnd) AS INT)*60 + CAST(ROUND((s.BrkInPunchEnd - FLOOR(s.BrkInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.ShfOutPunchStart) AS INT)*60 + CAST(ROUND((s.ShfOutPunchStart - FLOOR(s.ShfOutPunchStart))*100.0, 0) AS INT))/2)%60)/100.0 AS real)
+        ELSE 0.0 END,
+    Mid_Arr_BIn = CASE 
+        WHEN ISNULL(s.BrkOutPunchStart, 0) = 0 AND s.BrkInPunchStart > 0 AND s.BrkInPunchStart > s.ShfInPunchEnd THEN
+            CAST(((CAST(FLOOR(s.ShfInPunchEnd) AS INT)*60 + CAST(ROUND((s.ShfInPunchEnd - FLOOR(s.ShfInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkInPunchStart) AS INT)*60 + CAST(ROUND((s.BrkInPunchStart - FLOOR(s.BrkInPunchStart))*100.0, 0) AS INT))/2)/60
+                 + (((CAST(FLOOR(s.ShfInPunchEnd) AS INT)*60 + CAST(ROUND((s.ShfInPunchEnd - FLOOR(s.ShfInPunchEnd))*100.0, 0) AS INT)
+                 + CAST(FLOOR(s.BrkInPunchStart) AS INT)*60 + CAST(ROUND((s.BrkInPunchStart - FLOOR(s.BrkInPunchStart))*100.0, 0) AS INT))/2)%60)/100.0 AS real)
+        ELSE 0.0 END
 INTO #EmpShifts
 FROM #ActiveEmployees ae
 CROSS JOIN #DateRange d
@@ -445,27 +473,35 @@ WITH PunchSlots AS (
             -- 3. In-Window Break Out
             WHEN es.BrkOutPunchStart > 0 AND rp.DecTime >= es.BrkOutPunchStart AND rp.DecTime <= es.BrkOutPunchEnd THEN 'BOUT'
             
-            -- 4. Late Arrival / Early Break Out NA (between Arrival end and Break Out start)
-            WHEN es.BrkOutPunchStart > 0 AND rp.DecTime > es.ShfInPunchEnd AND rp.DecTime < es.BrkOutPunchStart THEN 'BOUT_NA'
+            -- 4. Between Arrival End and Break Out Start (Window divided by 2: closer to ARR -> ARR_NA, closer to BOUT -> BOUT_NA)
+            WHEN es.BrkOutPunchStart > 0 AND rp.DecTime > es.ShfInPunchEnd AND rp.DecTime < es.Mid_Arr_BOut THEN 'ARR_NA'
+            WHEN es.BrkOutPunchStart > 0 AND rp.DecTime >= es.Mid_Arr_BOut AND rp.DecTime < es.BrkOutPunchStart THEN 'BOUT_NA'
             
             -- 5. In-Window Break In
             WHEN es.BrkInPunchStart > 0 AND rp.DecTime >= es.BrkInPunchStart AND rp.DecTime <= es.BrkInPunchEnd THEN 'BIN'
             
-            -- 6. Break In NA (between Break Out end and Break In start)
-            WHEN es.BrkInPunchStart > 0 AND rp.DecTime > es.BrkOutPunchEnd AND rp.DecTime < es.BrkInPunchStart THEN 'BIN_NA'
+            -- 6. Between Break Out End and Break In Start (Window divided by 2: e.g. 11.15-11.30 -> BOUT_NA, 11.30-11.45 -> BIN_NA)
+            WHEN es.BrkInPunchStart > 0 AND es.BrkOutPunchEnd > 0 AND rp.DecTime > es.BrkOutPunchEnd AND rp.DecTime < es.Mid_BOut_BIn THEN 'BOUT_NA'
+            WHEN es.BrkInPunchStart > 0 AND es.BrkOutPunchEnd > 0 AND rp.DecTime >= es.Mid_BOut_BIn AND rp.DecTime < es.BrkInPunchStart THEN 'BIN_NA'
             
             -- 7. In-Window Departure
             WHEN es.ShfOutPunchStart > 0 AND rp.DecTime >= es.ShfOutPunchStart AND rp.DecTime <= es.ShfOutPunchEnd THEN 'DEP'
             
-            -- 8. Early Departure NA (between Break In end and Departure start)
-            WHEN es.BrkInPunchEnd > 0 AND es.ShfOutPunchStart > 0 AND rp.DecTime > es.BrkInPunchEnd AND rp.DecTime < es.ShfOutPunchStart THEN 'DEP_NA'
+            -- 8. Between Break In End and Departure Start (Window divided by 2: closer to BIN -> BIN_NA, closer to DEP -> DEP_NA)
+            WHEN es.BrkInPunchEnd > 0 AND es.ShfOutPunchStart > 0 AND rp.DecTime > es.BrkInPunchEnd AND rp.DecTime < es.Mid_BIn_Dep THEN 'BIN_NA'
+            WHEN es.BrkInPunchEnd > 0 AND es.ShfOutPunchStart > 0 AND rp.DecTime >= es.Mid_BIn_Dep AND rp.DecTime < es.ShfOutPunchStart THEN 'DEP_NA'
             
             -- 9. Late Departure NA (after Departure end)
             WHEN es.ShfOutPunchEnd > 0 AND rp.DecTime > es.ShfOutPunchEnd THEN 'DEP_NA'
             
-            -- Handling for shifts without break windows (BrkOutPunchStart = 0)
-            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND rp.DecTime > es.ShfInPunchEnd AND rp.DecTime < ISNULL(es.hdstart, (es.shf_in + es.shf_out)/2.0) THEN 'ARR_NA'
-            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND rp.DecTime >= ISNULL(es.hdstart, (es.shf_in + es.shf_out)/2.0) AND rp.DecTime < es.ShfOutPunchStart THEN 'DEP_NA'
+            -- Handling for shifts without break-out window, but with break-in window (e.g. AS, TOA)
+            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND es.BrkInPunchStart > 0 AND rp.DecTime > es.ShfInPunchEnd AND rp.DecTime < es.Mid_Arr_BIn THEN 'ARR_NA'
+            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND es.BrkInPunchStart > 0 AND rp.DecTime >= es.Mid_Arr_BIn AND rp.DecTime < es.BrkInPunchStart THEN 'BIN_NA'
+            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND es.BrkInPunchStart > 0 AND es.BrkInPunchEnd > 0 AND rp.DecTime > es.BrkInPunchEnd THEN 'BIN_NA'
+
+            -- Handling for shifts without any break windows (BrkOutPunchStart = 0 and BrkInPunchStart = 0)
+            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND ISNULL(es.BrkInPunchStart, 0) = 0 AND rp.DecTime > es.ShfInPunchEnd AND rp.DecTime < ISNULL(es.hdstart, (es.shf_in + es.shf_out)/2.0) THEN 'ARR_NA'
+            WHEN ISNULL(es.BrkOutPunchStart, 0) = 0 AND ISNULL(es.BrkInPunchStart, 0) = 0 AND rp.DecTime >= ISNULL(es.hdstart, (es.shf_in + es.shf_out)/2.0) AND rp.DecTime < es.ShfOutPunchStart THEN 'DEP_NA'
             
             ELSE 'DEP_NA'
         END
