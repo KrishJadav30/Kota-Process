@@ -368,14 +368,47 @@ SET
         WHEN t.H1 = 1 AND t.H2 = 0 THEN t.f_half             -- P A
         WHEN t.H1 = 0 AND t.H2 = 1 THEN t.s_half             -- A P
         ELSE 0 
-    END                                                       -- A A
+    END,                                                      -- A A
+    m.NDAHrs = 0.0
 
 FROM dbo.MonthTrns m
 INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate;
 
 PRINT 'MonthTrns UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
 
--- Step 5: Clean up memory
+-- Step 5: Update NDAHrs based on shift and presabs
+UPDATE dbo.MonthTrns
+SET NDAHrs = ISNULL(NDAHrs, 0) + 
+    CASE 
+        -- Shifts D, DS
+        WHEN shift IN ('D', 'DS') AND presabs IN ('P P ', 'A P ') THEN 2.3
+        
+        -- Shift D1
+        WHEN shift = 'D1' AND presabs IN ('P P ', 'A P ') THEN 1.0
+        
+        -- Shifts D2, D3
+        WHEN shift IN ('D2', 'D3') AND presabs IN ('P P ', 'A P ') THEN 2.0
+        
+        -- Shift E
+        WHEN shift = 'E' AND presabs = 'P P ' THEN 7.0
+        WHEN shift = 'E' AND presabs = 'P A ' THEN 4.0
+        WHEN shift = 'E' AND presabs = 'A P ' THEN 3.0
+        
+        -- Shift G
+        WHEN shift = 'G' AND presabs = 'P P ' THEN 6.3
+        WHEN shift = 'G' AND presabs = 'P A ' THEN 4.0
+        WHEN shift = 'G' AND presabs = 'A P ' THEN 2.3
+        
+        -- Default case to add 0 if conditions aren't met
+        ELSE 0 
+    END 
+WHERE shift IN ('D', 'DS', 'D1', 'D2', 'D3', 'E', 'G')
+  AND DailyDate >= CAST(@FromDate AS DATETIME) 
+  AND DailyDate < DATEADD(DAY, 1, CAST(@ToDate AS DATETIME));
+
+PRINT 'MonthTrns NDAHrs UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
+
+-- Step 6: Clean up memory
 DROP TABLE #TempUpdates;
 
 PRINT 'Manual swapping operation successfully completed!';

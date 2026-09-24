@@ -496,6 +496,7 @@ SET
     m.presabs   = t.presabs,
     m.present   = t.present,
     m.wrkhrs    = t.wrkhrs,
+    m.NDAHrs    = 0.0,
     m.upd_date  = SYSDATETIME()
 FROM dbo.MonthTrns m
 INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate;
@@ -507,13 +508,13 @@ INSERT INTO dbo.MonthTrns (
     EmpCode, DailyDate, shift, entry, entreq,
     arrtime, ArrtimeNA, actrt_o, actrt_oNA, actrt_i, actrt_iNA, deptime, DeptimeNA,
     latehrs, earlhrs, actbreak, wrkhrs, ovtime, present, presabs, chq,
-    Yr, Month, upd_date
+    Yr, Month, upd_date, NDAHrs
 )
 SELECT 
     t.EmpCode, t.DailyDate, t.ShiftCode, t.FinalEntry, t.EmpEntry,
     t.NewArr, t.NewArrNA, t.NewBOut, t.NewBOutNA, t.NewBIn, t.NewBInNA, t.NewDep, t.NewDepNA,
     t.latehrs, t.earlhrs, 0.0, t.wrkhrs, 0.0, t.present, t.presabs, t.NewCHQ,
-    t.Yr, t.Month, SYSDATETIME()
+    t.Yr, t.Month, SYSDATETIME(), 0.0
 FROM #TempUpdates t
 WHERE NOT EXISTS (
     SELECT 1 FROM dbo.MonthTrns m WHERE m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate
@@ -521,7 +522,39 @@ WHERE NOT EXISTS (
 
 PRINT 'MonthTrns INSERT completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) inserted.';
 
--- Step 9: Clean up temporary tables
+-- Step 9: Update NDAHrs based on shift and presabs
+UPDATE dbo.MonthTrns
+SET NDAHrs = ISNULL(NDAHrs, 0) + 
+    CASE 
+        -- Shifts D, DS
+        WHEN shift IN ('D', 'DS') AND presabs IN ('P P ', 'A P ') THEN 2.3
+        
+        -- Shift D1
+        WHEN shift = 'D1' AND presabs IN ('P P ', 'A P ') THEN 1.0
+        
+        -- Shifts D2, D3
+        WHEN shift IN ('D2', 'D3') AND presabs IN ('P P ', 'A P ') THEN 2.0
+        
+        -- Shift E
+        WHEN shift = 'E' AND presabs = 'P P ' THEN 7.0
+        WHEN shift = 'E' AND presabs = 'P A ' THEN 4.0
+        WHEN shift = 'E' AND presabs = 'A P ' THEN 3.0
+        
+        -- Shift G
+        WHEN shift = 'G' AND presabs = 'P P ' THEN 6.3
+        WHEN shift = 'G' AND presabs = 'P A ' THEN 4.0
+        WHEN shift = 'G' AND presabs = 'A P ' THEN 2.3
+        
+        -- Default case to add 0 if conditions aren't met
+        ELSE 0 
+    END 
+WHERE shift IN ('D', 'DS', 'D1', 'D2', 'D3', 'E', 'G')
+  AND DailyDate >= CAST(@FromDate AS DATETIME) 
+  AND DailyDate < DATEADD(DAY, 1, CAST(@ToDate AS DATETIME));
+
+PRINT 'MonthTrns NDAHrs UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
+
+-- Step 10: Clean up temporary tables
 DROP TABLE #DateRange;
 DROP TABLE #ActiveEmployees;
 DROP TABLE #EmpShifts;
