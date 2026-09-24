@@ -437,15 +437,17 @@ RawCalc AS (
             ELSE '' 
         END,
         H1 = CASE 
+            -- Entry 1 Rule
+            WHEN a.EmpMstEntry = 1 AND a.NewArr > 0 THEN 1
+            -- Entry 4 Rule: Both Arrival and Break Out required for First Half (H1)
             WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewBIn > 0 AND a.NewBOut = 0 AND a.NewDep = 0 THEN 1 
             ELSE 0 
         END,
         H2 = CASE 
+            -- Entry 1 Rule
+            WHEN a.EmpMstEntry = 1 AND a.NewBIn > 0 THEN 1
+            -- Entry 4 Rule: Both Break In and Departure required for Second Half (H2)
             WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.NewBOut > 0 AND a.NewDep > 0 AND a.NewArr = 0 AND a.NewBIn = 0 THEN 1 
             ELSE 0 
         END
     FROM PreCalc a

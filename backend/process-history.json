@@ -1,5 +1,29 @@
 [
   {
+    "Id": "9e77f10dce6d47489715653def08e3c9",
+    "ProcessDate": "2026-09-24 to 2026-11-30",
+    "ExecutedAt": "2026-09-24T09:15:37.6681773Z",
+    "Status": "Success",
+    "DurationMs": 357,
+    "RowsUpdated": 192,
+    "RowsInserted": 148,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 02:45:38 PM. Completed in 357ms. Updated 192 rows, Inserted 148 rows.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "5989ef9d416a4781bf4a96333b3a03f0",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T09:13:26.7782095Z",
+    "Status": "Success",
+    "DurationMs": 339,
+    "RowsUpdated": 190,
+    "RowsInserted": 0,
+    "TriggerSource": "Manual Trigger (On-Demand)",
+    "Message": "Ran at 02:43:27 PM. Completed in 339ms. Updated 190 rows, Inserted 0 rows.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "e6109508c8884d1d83ec8c65f204a4a5",
     "ProcessDate": "2026-09-24 to 2026-10-31",
     "ExecutedAt": "2026-09-24T09:04:23.1638854Z",

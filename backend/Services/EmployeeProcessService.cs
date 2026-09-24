@@ -601,10 +601,8 @@ RawCalc AS (
             WHEN a.EmpEntry = 2 AND a.NewArr > 0 THEN 1
             WHEN a.EmpEntry = 2 AND a.NewBOut > 0 AND a.NewDep = 0 THEN 1
 
-            -- Entry 4 Rule: Exact original Entry 4 logic
+            -- Entry 4 Rule: Both Arrival and Break Out required for First Half (H1)
             WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
-            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewBIn > 0 AND a.NewBOut = 0 AND a.NewDep = 0 THEN 1 
             ELSE 0 
         END,
         H2 = CASE 
@@ -615,10 +613,8 @@ RawCalc AS (
             WHEN a.EmpEntry = 2 AND a.NewDep > 0 THEN 1
             WHEN a.EmpEntry = 2 AND a.NewBIn > 0 AND a.NewArr = 0 THEN 1
 
-            -- Entry 4 Rule: Exact original Entry 4 logic
+            -- Entry 4 Rule: Both Break In and Departure required for Second Half (H2)
             WHEN a.EmpEntry = 4 AND a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
-            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.EmpEntry = 4 AND a.NewBOut > 0 AND a.NewDep > 0 AND a.NewArr = 0 AND a.NewBIn = 0 THEN 1 
             ELSE 0 
         END
     FROM PreCalc a
