@@ -208,9 +208,9 @@ ShiftInfo AS (
                      + CAST(FLOOR(s.BrkInPunchStart) AS INT)*60 + CAST(ROUND((s.BrkInPunchStart - FLOOR(s.BrkInPunchStart))*100.0, 0) AS INT))/2)%60)/100.0 AS real)
             ELSE 0.0 END
     FROM dbo.MonthTrns m
-    INNER JOIN dbo.instshft s ON m.shift = s.shift
-    LEFT JOIN dbo.empmst e ON m.EmpCode = e.empcode
-    LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat
+    INNER JOIN dbo.instshft s ON m.shift = s.shift COLLATE database_default
+    LEFT JOIN dbo.empmst e ON m.EmpCode = e.empcode COLLATE database_default
+    LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat COLLATE database_default
     WHERE m.DailyDate >= CAST(@FromDate AS DATETIME) 
       AND m.DailyDate < DATEADD(DAY, 1, CAST(@ToDate AS DATETIME))
 ),
@@ -262,7 +262,7 @@ PunchSlots AS (
             ELSE 'DEP_NA'
         END
     FROM ShiftInfo si
-    INNER JOIN MonthPunches mp ON si.EmpCode = mp.EmpCode AND si.DailyDate = mp.DailyDate
+    INNER JOIN MonthPunches mp ON si.EmpCode = mp.EmpCode COLLATE database_default AND si.DailyDate = mp.DailyDate
 ),
 RawCalc AS (
     SELECT 
@@ -290,7 +290,7 @@ RawCalc AS (
         si.ShfOutPunchStart,
         si.ShfOutPunchEnd
     FROM ShiftInfo si
-    LEFT JOIN PunchSlots ps ON si.EmpCode = ps.EmpCode AND si.DailyDate = ps.DailyDate
+    LEFT JOIN PunchSlots ps ON si.EmpCode = ps.EmpCode COLLATE database_default AND si.DailyDate = ps.DailyDate
     GROUP BY si.EmpCode, si.DailyDate, si.EmpMstEntry, si.Location, si.RawArr, si.RawBIn,
              si.f_half, si.s_half, si.shf_in, si.shf_out, si.lt_allow,
              si.ShfInPunchStart, si.ShfInPunchEnd, si.ShfOutPunchStart, si.ShfOutPunchEnd
@@ -457,7 +457,7 @@ SET
     m.NDAHrs = 0.0
 
 FROM dbo.MonthTrns m
-INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate;
+INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode COLLATE database_default AND m.DailyDate = t.DailyDate;
 
 PRINT 'MonthTrns UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
 

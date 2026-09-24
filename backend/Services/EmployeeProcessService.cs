@@ -74,7 +74,7 @@ public class EmployeeProcessService : IEmployeeProcessService
                 e.dept, 
                 e.cat
             FROM dbo.empmst e
-            LEFT JOIN dbo.location l ON RTRIM(LTRIM(e.Location)) = RTRIM(LTRIM(l.Location))
+            LEFT JOIN dbo.location l ON RTRIM(LTRIM(e.Location)) = RTRIM(LTRIM(l.Location)) COLLATE database_default
             ORDER BY e.empcode ASC;
         ";
 
@@ -114,7 +114,7 @@ public class EmployeeProcessService : IEmployeeProcessService
                 l.LocDesc,
                 COUNT(e.empcode) AS EmployeeCount
             FROM dbo.location l
-            LEFT JOIN dbo.empmst e ON RTRIM(LTRIM(e.Location)) = RTRIM(LTRIM(l.Location))
+            LEFT JOIN dbo.empmst e ON RTRIM(LTRIM(e.Location)) = RTRIM(LTRIM(l.Location)) COLLATE database_default
             GROUP BY l.Location, l.LocDesc
             ORDER BY l.Location ASC;
         ";
@@ -210,7 +210,7 @@ public class EmployeeProcessService : IEmployeeProcessService
             // 1. Create temporary table for selected employee codes
             using (var createCmd = new SqlCommand(@"
                 IF OBJECT_ID('tempdb..#SelectedEmployees') IS NOT NULL DROP TABLE #SelectedEmployees;
-                CREATE TABLE #SelectedEmployees (EmpCode NVARCHAR(50) NOT NULL PRIMARY KEY);
+                CREATE TABLE #SelectedEmployees (EmpCode NVARCHAR(50) COLLATE database_default NOT NULL PRIMARY KEY);
             ", connection))
             {
                 await createCmd.ExecuteNonQueryAsync();
@@ -338,8 +338,8 @@ SELECT DISTINCT
     ISNULL(cd.lt_allow, 0.0) AS lt_allow
 INTO #ActiveEmployees
 FROM dbo.empmst e
-INNER JOIN #SelectedEmployees se ON e.empcode = se.EmpCode
-LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat;
+INNER JOIN #SelectedEmployees se ON e.empcode = se.EmpCode COLLATE database_default
+LEFT JOIN dbo.catdesc cd ON e.cat = cd.cat COLLATE database_default;
 
 CREATE CLUSTERED INDEX IDX_ActiveEmployees ON #ActiveEmployees(EmpCode);
 
@@ -407,7 +407,7 @@ SELECT
 INTO #EmpShifts
 FROM #ActiveEmployees ae
 CROSS JOIN #DateRange d
-LEFT JOIN dbo.MonthShift ms ON ms.empcode = ae.EmpCode 
+LEFT JOIN dbo.MonthShift ms ON ms.empcode = ae.EmpCode COLLATE database_default
     AND ms.Yr = YEAR(d.DailyDate) 
     AND ms.Month = CASE MONTH(d.DailyDate) 
         WHEN 1 THEN 'Jan' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar' WHEN 4 THEN 'Apr' 
@@ -425,7 +425,7 @@ LEFT JOIN dbo.instshft s ON s.shift = (
         WHEN 25 THEN ms.d25 WHEN 26 THEN ms.d26 WHEN 27 THEN ms.d27 WHEN 28 THEN ms.d28
         WHEN 29 THEN ms.d29 WHEN 30 THEN ms.d30 WHEN 31 THEN ms.d31
     END
-);
+) COLLATE database_default;
 
 CREATE CLUSTERED INDEX IDX_EmpShifts ON #EmpShifts(EmpCode, DailyDate);
 
@@ -441,7 +441,7 @@ SELECT DISTINCT
     )
 INTO #RawPunches
 FROM #EmpShifts es
-INNER JOIN dbo.Attlogs a ON a.EmpCode = es.EmpCode
+INNER JOIN dbo.Attlogs a ON a.EmpCode = es.EmpCode COLLATE database_default
     AND a.TransDate >= CAST(es.DailyDate AS DATETIME)
     AND a.TransDate < DATEADD(DAY, 2, CAST(es.DailyDate AS DATETIME))
     AND (
@@ -506,7 +506,7 @@ WITH PunchSlots AS (
             ELSE 'DEP_NA'
         END
     FROM #EmpShifts es
-    INNER JOIN #RawPunches rp ON es.EmpCode = rp.EmpCode AND es.DailyDate = rp.DailyDate
+    INNER JOIN #RawPunches rp ON es.EmpCode = rp.EmpCode COLLATE database_default AND es.DailyDate = rp.DailyDate
 ),
 AggregatedSlots AS (
     SELECT 
@@ -529,7 +529,7 @@ AggregatedSlots AS (
         NewDep    = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP'     THEN ps.DecTime END), 0.0),
         NewDepNA  = ISNULL(MAX(CASE WHEN ps.Slot = 'DEP_NA'  THEN ps.DecTime END), 0.0)
     FROM #EmpShifts es
-    LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode AND es.DailyDate = ps.DailyDate
+    LEFT JOIN PunchSlots ps ON es.EmpCode = ps.EmpCode COLLATE database_default AND es.DailyDate = ps.DailyDate
     GROUP BY es.EmpCode, es.DailyDate, es.ShiftCode, es.EmpEntry, es.EmpMstEntry, es.Location, es.Yr, es.Month, es.f_half, es.s_half,
              es.shf_in, es.shf_out, es.lt_allow,
              es.ShfInPunchStart, es.ShfInPunchEnd, es.ShfOutPunchStart, es.ShfOutPunchEnd
@@ -704,7 +704,7 @@ SET
     m.NDAHrs    = 0.0,
     m.upd_date  = SYSDATETIME()
 FROM dbo.MonthTrns m
-INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate;
+INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode COLLATE database_default AND m.DailyDate = t.DailyDate;
 
 PRINT 'MonthTrns UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
 
@@ -722,7 +722,7 @@ SELECT
     t.Yr, t.Month, SYSDATETIME(), 0.0
 FROM #TempUpdates t
 WHERE NOT EXISTS (
-    SELECT 1 FROM dbo.MonthTrns m WHERE m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate
+    SELECT 1 FROM dbo.MonthTrns m WHERE m.EmpCode = t.EmpCode COLLATE database_default AND m.DailyDate = t.DailyDate
 );
 
 PRINT 'MonthTrns INSERT completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) inserted.';
@@ -754,7 +754,7 @@ SET NDAHrs = ISNULL(m.NDAHrs, 0) +
         ELSE 0 
     END 
 FROM dbo.MonthTrns m
-INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode AND m.DailyDate = t.DailyDate
+INNER JOIN #TempUpdates t ON m.EmpCode = t.EmpCode COLLATE database_default AND m.DailyDate = t.DailyDate
 WHERE m.shift IN ('D', 'DS', 'D1', 'D2', 'D3', 'E', 'G');
 
 PRINT 'MonthTrns NDAHrs UPDATE completed: ' + CAST(@@ROWCOUNT AS VARCHAR(10)) + ' row(s) updated.';
