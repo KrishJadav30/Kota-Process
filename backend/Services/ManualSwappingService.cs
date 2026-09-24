@@ -361,17 +361,19 @@ SELECT
     
     -- Evaluate H1 (First Half)
     H1 = CASE 
-        WHEN NewArr > 0 AND NewBOut > 0 THEN 1 
-        WHEN NewArr > 0 AND NewDep > 0 AND NewBOut = 0 AND NewBIn = 0 THEN 1 
-        WHEN NewArr > 0 AND NewBIn > 0 AND NewBOut = 0 AND NewDep = 0 THEN 1 
+        -- If Arrival is available -> H1 = 1
+        WHEN NewArr > 0 THEN 1
+        -- If Break Out is available (without Departure) -> H1 = 1
+        WHEN NewBOut > 0 AND NewDep = 0 THEN 1
         ELSE 0 
     END,
         
     -- Evaluate H2 (Second Half)
     H2 = CASE 
-        WHEN NewBIn > 0 AND NewDep > 0 THEN 1 
-        WHEN NewArr > 0 AND NewDep > 0 AND NewBOut = 0 AND NewBIn = 0 THEN 1 
-        WHEN NewBOut > 0 AND NewDep > 0 AND NewArr = 0 AND NewBIn = 0 THEN 1 
+        -- If Departure is available -> H2 = 1
+        WHEN NewDep > 0 THEN 1
+        -- If Break In is available (without Arrival) -> H2 = 1
+        WHEN NewBIn > 0 AND NewArr = 0 THEN 1
         ELSE 0 
     END,
 

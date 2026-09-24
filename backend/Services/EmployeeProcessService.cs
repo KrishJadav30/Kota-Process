@@ -594,15 +594,31 @@ RawCalc AS (
             ELSE '' 
         END,
         H1 = CASE 
-            WHEN a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewBIn > 0 AND a.NewBOut = 0 AND a.NewDep = 0 THEN 1 
+            -- Entry 1 Rule
+            WHEN a.EmpMstEntry = 1 AND a.NewArr > 0 THEN 1
+            
+            -- Entry 2 Rule: In-window Arrival gives H1 = 1
+            WHEN a.EmpEntry = 2 AND a.NewArr > 0 THEN 1
+            WHEN a.EmpEntry = 2 AND a.NewBOut > 0 AND a.NewDep = 0 THEN 1
+
+            -- Entry 4 Rule: Exact original Entry 4 logic
+            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewBOut > 0 THEN 1 
+            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
+            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewBIn > 0 AND a.NewBOut = 0 AND a.NewDep = 0 THEN 1 
             ELSE 0 
         END,
         H2 = CASE 
-            WHEN a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
-            WHEN a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
-            WHEN a.NewBOut > 0 AND a.NewDep > 0 AND a.NewArr = 0 AND a.NewBIn = 0 THEN 1 
+            -- Entry 1 Rule
+            WHEN a.EmpMstEntry = 1 AND a.NewBIn > 0 THEN 1
+            
+            -- Entry 2 Rule: In-window Departure gives H2 = 1
+            WHEN a.EmpEntry = 2 AND a.NewDep > 0 THEN 1
+            WHEN a.EmpEntry = 2 AND a.NewBIn > 0 AND a.NewArr = 0 THEN 1
+
+            -- Entry 4 Rule: Exact original Entry 4 logic
+            WHEN a.EmpEntry = 4 AND a.NewBIn > 0 AND a.NewDep > 0 THEN 1 
+            WHEN a.EmpEntry = 4 AND a.NewArr > 0 AND a.NewDep > 0 AND a.NewBOut = 0 AND a.NewBIn = 0 THEN 1 
+            WHEN a.EmpEntry = 4 AND a.NewBOut > 0 AND a.NewDep > 0 AND a.NewArr = 0 AND a.NewBIn = 0 THEN 1 
             ELSE 0 
         END
     FROM PreCalc a
