@@ -10,7 +10,7 @@ import {
   CheckSquare, Square, Calendar, ArrowRight, Filter, 
   ChevronLeft, ChevronRight, Zap, ArrowLeftRight, UserCheck, Check,
   MapPin, X, ChevronDown, CheckCheck, Clock, User,
-  ArrowUpDown, ArrowUp, ArrowDown, Copy
+  ArrowUpDown, ArrowUp, ArrowDown, Copy, Star, Lock
 } from 'lucide-react'
 
 export function EmployeeProcessPage() {
@@ -445,6 +445,19 @@ export function EmployeeProcessPage() {
     return { total: selectedCodes.size, entry1: e1, entry2: e2, entry4: e4 }
   }, [employees, selectedCodes])
 
+  // Count breakdown for all employees by entry mode
+  const entryCounts = useMemo(() => {
+    let e1 = 0
+    let e2 = 0
+    let e4 = 0
+    employees.forEach(emp => {
+      if (emp.entry === 1) e1++
+      else if (emp.entry === 2) e2++
+      else if (emp.entry === 4) e4++
+    })
+    return { e1, e2, e4 }
+  }, [employees])
+
   // Filtered locations in dropdown
   const filteredLocationList = useMemo(() => {
     if (!locationSearchQuery.trim()) return locations
@@ -758,18 +771,18 @@ export function EmployeeProcessPage() {
 
       {/* 4. Employee Selection List Card */}
       <Card className="border border-slate-200/90 bg-white shadow-xs rounded-xl overflow-visible w-full">
-        <CardHeader className="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-slate-100">
+        <CardHeader className="p-4 sm:p-5 pb-3.5 border-b border-slate-200 bg-slate-50/60">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold shadow-2xs shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold shadow-2xs shrink-0">
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-slate-900">
                     Employee Roster Selection
                   </CardTitle>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-200/80 text-slate-700 border border-slate-300/80">
                     {filteredEmployees.length} of {employees.length}
                   </span>
                 </div>
@@ -781,21 +794,21 @@ export function EmployeeProcessPage() {
 
             {/* Quick Selection Status & Bulk Actions */}
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2 shadow-2xs">
                 <UserCheck className="h-4 w-4 text-blue-600" />
                 <span>Selected: {selectedCounts.total}</span>
                 {selectedCounts.entry1 > 0 && (
-                  <span className="text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded text-2xs font-bold">
+                  <span className="text-amber-900 bg-amber-100 px-1.5 py-0.5 rounded text-2xs font-bold border border-amber-300">
                     {selectedCounts.entry1} E1
                   </span>
                 )}
                 {selectedCounts.entry2 > 0 && (
-                  <span className="text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded text-2xs font-bold">
+                  <span className="text-indigo-900 bg-indigo-100 px-1.5 py-0.5 rounded text-2xs font-bold border border-indigo-300">
                     {selectedCounts.entry2} E2
                   </span>
                 )}
                 {selectedCounts.entry4 > 0 && (
-                  <span className="text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded text-2xs font-bold">
+                  <span className="text-blue-900 bg-blue-100 px-1.5 py-0.5 rounded text-2xs font-bold border border-blue-300">
                     {selectedCounts.entry4} E4
                   </span>
                 )}
@@ -806,7 +819,7 @@ export function EmployeeProcessPage() {
                 variant="outline"
                 size="sm"
                 onClick={areAllFilteredSelected ? handleDeselectAll : handleSelectAllFiltered}
-                className="text-xs font-semibold h-8 cursor-pointer gap-1.5"
+                className="text-xs font-semibold h-8 cursor-pointer gap-1.5 bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-2xs"
               >
                 {areAllFilteredSelected ? (
                   <>
@@ -825,7 +838,7 @@ export function EmployeeProcessPage() {
                 <button
                   type="button"
                   onClick={handleDeselectAll}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline px-2 py-1 cursor-pointer"
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:underline px-2 py-1 cursor-pointer transition-colors"
                 >
                   Clear Selection
                 </button>
@@ -843,7 +856,7 @@ export function EmployeeProcessPage() {
                 placeholder="Search by Employee Code or Name..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50/60"
+                className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm rounded-lg border border-slate-300 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-2xs"
               />
               {searchQuery && (
                 <button
@@ -863,10 +876,10 @@ export function EmployeeProcessPage() {
                 <button
                   type="button"
                   onClick={() => setIsLocationDropdownOpen(prev => !prev)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs ${
                     selectedLocations.size > 0
-                      ? 'border-blue-500 bg-blue-50/80 text-blue-900 shadow-2xs'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                      ? 'border-blue-500 bg-blue-50/80 text-blue-900'
+                      : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
                   }`}
                 >
                   <MapPin className={`h-4 w-4 ${selectedLocations.size > 0 ? 'text-blue-600' : 'text-slate-500'}`} />
@@ -965,25 +978,25 @@ export function EmployeeProcessPage() {
                 )}
               </div>
 
-              {/* Entry Filter Tabs */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200/80">
+              {/* Segmented Entry Filter Pills */}
+              <div className="inline-flex items-center p-1 bg-slate-200/80 rounded-lg text-xs font-semibold shadow-2xs gap-1">
                 <button
                   type="button"
                   onClick={() => setEntryFilter('all')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     entryFilter === 'all'
-                      ? 'bg-white text-slate-900 shadow-2xs'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  All
+                  All ({employees.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setEntryFilter('selected')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                     entryFilter === 'selected'
-                      ? 'bg-blue-600 text-white shadow-2xs'
+                      ? 'bg-blue-600 text-white shadow-2xs font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -992,35 +1005,38 @@ export function EmployeeProcessPage() {
                 <button
                   type="button"
                   onClick={() => setEntryFilter('4')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                     entryFilter === '4'
-                      ? 'bg-blue-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                      : 'text-blue-700 hover:text-blue-900'
                   }`}
                 >
-                  Entry 4
+                  <Zap className="h-3 w-3" />
+                  <span>Entry 4 ({entryCounts.e4})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setEntryFilter('2')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                     entryFilter === '2'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-bold'
+                      : 'text-indigo-800 hover:text-indigo-950'
                   }`}
                 >
-                  Entry 2
+                  <ArrowLeftRight className="h-3 w-3" />
+                  <span>Entry 2 ({entryCounts.e2})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setEntryFilter('1')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
                     entryFilter === '1'
-                      ? 'bg-amber-600 text-white shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-amber-600 text-white shadow-2xs font-bold'
+                      : 'text-amber-800 hover:text-amber-950'
                   }`}
                 >
-                  Entry 1
+                  <Star className="h-3 w-3" />
+                  <span>Entry 1 ({entryCounts.e1})</span>
                 </button>
               </div>
             </div>
@@ -1035,7 +1051,7 @@ export function EmployeeProcessPage() {
                 return (
                   <span
                     key={locCode}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-2xs font-semibold"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-2xs font-semibold shadow-2xs"
                   >
                     <span>{loc ? `${loc.locDesc} (${locCode})` : locCode}</span>
                     <button
@@ -1098,13 +1114,13 @@ export function EmployeeProcessPage() {
             </div>
           )}
 
-          {/* Clean, Responsive Table (NO DESIGNATION, NO DEPT, NO CATEGORY) */}
+          {/* Clean, Responsive Table with Full Divide-X and Border Highlights */}
           {!isLoadingEmployees && !loadError && filteredEmployees.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/90 border-b border-slate-200/90 text-slate-700 font-bold uppercase tracking-wider text-xs">
-                    <th className="py-3.5 px-4 w-12 text-center">
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm table-auto">
+                <thead className="border-l-4 border-l-transparent">
+                  <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200">
+                    <th className="py-3.5 px-3 sm:px-4 w-12 text-center select-none">
                       <input
                         type="checkbox"
                         checked={areAllFilteredSelected}
@@ -1115,7 +1131,7 @@ export function EmployeeProcessPage() {
                     </th>
                     <th 
                       onClick={() => handleSortRoster('empCode')}
-                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[150px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Employee Code</span>
@@ -1128,7 +1144,7 @@ export function EmployeeProcessPage() {
                     </th>
                     <th 
                       onClick={() => handleSortRoster('name')}
-                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                      className="py-3.5 px-3 sm:px-4 cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Employee Name</span>
@@ -1141,7 +1157,7 @@ export function EmployeeProcessPage() {
                     </th>
                     <th 
                       onClick={() => handleSortRoster('location')}
-                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Location</span>
@@ -1154,7 +1170,7 @@ export function EmployeeProcessPage() {
                     </th>
                     <th 
                       onClick={() => handleSortRoster('entry')}
-                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[160px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Master Entry</span>
@@ -1165,23 +1181,26 @@ export function EmployeeProcessPage() {
                         )}
                       </div>
                     </th>
-                    <th className="py-3.5 px-4">Batch Rule</th>
+                    <th className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[240px]">
+                      Batch Processing Rule
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200 bg-white font-normal">
                   {paginatedEmployees.map(emp => {
                     const isSelected = selectedCodes.has(emp.empCode)
                     return (
                       <tr
                         key={emp.empCode}
                         onClick={() => handleToggleEmployee(emp.empCode)}
-                        className={`transition-colors cursor-pointer select-none ${
+                        className={`divide-x divide-slate-200 transition-colors cursor-pointer select-none ${
                           isSelected 
-                            ? 'bg-blue-50/70 hover:bg-blue-50' 
-                            : 'hover:bg-slate-50/80'
+                            ? 'border-l-4 border-l-blue-600 bg-blue-50/40 hover:bg-blue-50/60' 
+                            : 'border-l-4 border-l-transparent hover:bg-slate-50/80'
                         }`}
                       >
-                        <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
+                        {/* Checkbox */}
+                        <td className="py-3.5 px-3 sm:px-4 text-center w-12" onClick={e => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -1189,57 +1208,83 @@ export function EmployeeProcessPage() {
                             className="h-4.5 w-4.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900 text-sm sm:text-base whitespace-nowrap">
-                          {emp.empCode}
+
+                        {/* Employee Code */}
+                        <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[150px]">
+                          <span className="font-mono font-bold text-slate-900 text-sm bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/90 shadow-2xs inline-block">
+                            {emp.empCode}
+                          </span>
                         </td>
-                        <td className="py-3 px-4 font-semibold text-slate-900 text-sm sm:text-base">
-                          {emp.name}
+
+                        {/* Employee Name */}
+                        <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 text-sm">
+                          <span className="text-slate-900 font-semibold">{emp.name}</span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-slate-700">
+
+                        {/* Location */}
+                        <td className="py-3.5 px-3 sm:px-4 text-sm text-slate-700 whitespace-nowrap">
                           {emp.locationDesc ? (
-                            <span className="inline-flex items-center gap-1.5 font-medium text-slate-800 text-sm">
-                              <MapPin className="h-4 w-4 text-blue-500 shrink-0" />
-                              <span>{emp.locationDesc}</span>
-                              <span className="font-mono text-xs text-slate-500 font-normal">({emp.location})</span>
-                            </span>
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/90 border border-slate-200/90 text-slate-800 text-xs font-medium shadow-2xs">
+                              <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                              <span className="font-semibold">{emp.locationDesc}</span>
+                              <span className="font-mono text-2xs text-slate-500 font-normal">({emp.location})</span>
+                            </div>
                           ) : emp.location ? (
-                            <span className="font-mono text-slate-700 font-medium text-sm">[{emp.location}]</span>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100/90 border border-slate-200/90 font-mono text-slate-700 font-semibold text-xs shadow-2xs">
+                              <MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                              <span>[{emp.location}]</span>
+                            </span>
                           ) : (
-                            <span className="text-slate-400 italic text-sm">Unassigned</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-slate-400 bg-slate-100/70 border border-slate-200/50">
+                              Unassigned
+                            </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+
+                        {/* Master Entry */}
+                        <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[160px]">
                           {emp.entry === 1 ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
-                              <span>★ Entry 1</span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs">
+                              <Star className="h-3.5 w-3.5 text-amber-600 fill-amber-500 shrink-0" />
+                              <span>Entry 1</span>
                             </span>
                           ) : emp.entry === 2 ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs sm:text-sm font-bold bg-indigo-100 text-indigo-900 border border-indigo-300 shadow-2xs">
-                              Entry 2
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-900 border border-indigo-300 shadow-2xs">
+                              <ArrowLeftRight className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                              <span>Entry 2</span>
                             </span>
                           ) : emp.entry === 4 ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs sm:text-sm font-bold bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs">
-                              Entry 4
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-900 border border-blue-300 shadow-2xs">
+                              <Zap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                              <span>Entry 4</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 text-slate-700">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                               Entry {emp.entry}
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
+
+                        {/* Batch Processing Rule */}
+                        <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[240px]">
                           {emp.entry === 1 ? (
-                            <span className="inline-flex items-center font-bold text-xs sm:text-sm text-amber-800 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200 shadow-2xs">
-                              Locked Entry 1 (Single)
-                            </span>
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50/80 text-amber-900 text-xs font-bold shadow-2xs">
+                              <Lock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                              <span>Single Punch (Locked)</span>
+                            </div>
                           ) : (
-                            <span className={`inline-flex items-center font-bold text-xs sm:text-sm px-3 py-1 rounded-lg border shadow-2xs ${
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-2xs ${
                               targetEntry === 4
-                                ? 'text-blue-800 bg-blue-50 border-blue-200'
-                                : 'text-indigo-800 bg-indigo-50 border-indigo-200'
+                                ? 'bg-blue-50/80 border-blue-200 text-blue-900'
+                                : 'bg-indigo-50/80 border-indigo-200 text-indigo-900'
                             }`}>
-                              Will process as Entry {targetEntry}
-                            </span>
+                              {targetEntry === 4 ? (
+                                <Zap className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                              ) : (
+                                <ArrowLeftRight className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                              )}
+                              <span>Process as Entry {targetEntry}</span>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -1250,25 +1295,25 @@ export function EmployeeProcessPage() {
             </div>
           )}
 
-          {/* Pagination Controls */}
+          {/* Pagination Controls matching History Table Footer style */}
           {!isLoadingEmployees && !loadError && filteredEmployees.length > 0 && (
-            <div className="p-3 sm:p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50/50">
-              <div className="flex items-center gap-2">
+            <div className="py-3.5 px-4 sm:px-5 border-t border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-600 font-medium">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span>
                   Showing <span className="font-semibold text-slate-900">{Math.min(filteredEmployees.length, (page - 1) * pageSize + 1)}</span> to{' '}
                   <span className="font-semibold text-slate-900">{Math.min(filteredEmployees.length, page * pageSize)}</span> of{' '}
                   <span className="font-semibold text-slate-900">{filteredEmployees.length}</span> employees
                 </span>
-                <span className="hidden sm:inline text-slate-300">|</span>
+                <span className="text-slate-300">|</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="hidden sm:inline">Per page:</span>
+                  <span className="text-slate-500 font-normal">Per page:</span>
                   <select
                     value={pageSize}
                     onChange={e => {
                       setPageSize(Number(e.target.value))
                       setPage(1)
                     }}
-                    className="py-1 px-2 rounded border border-slate-200 bg-white text-xs font-semibold cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="py-1 px-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold cursor-pointer shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value={25}>25</option>
                     <option value={50}>50</option>
@@ -1276,16 +1321,21 @@ export function EmployeeProcessPage() {
                     <option value={200}>200</option>
                   </select>
                 </div>
+                <span className="text-slate-300">|</span>
+                <span className="inline-flex items-center gap-1.5 text-blue-700 font-semibold">
+                  <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+                  {selectedCodes.size} selected
+                </span>
               </div>
 
               {/* Navigation buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(1)}
                   disabled={page <= 1}
-                  className="h-8 px-2 text-xs cursor-pointer disabled:opacity-40"
+                  className="h-8 px-2.5 text-xs font-semibold border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer disabled:opacity-40 shadow-2xs"
                 >
                   First
                 </Button>
@@ -1294,19 +1344,19 @@ export function EmployeeProcessPage() {
                   size="sm"
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="h-8 w-8 p-0 cursor-pointer disabled:opacity-40"
+                  className="h-8 w-8 p-0 border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer disabled:opacity-40 shadow-2xs"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="px-2 font-semibold text-slate-900 text-xs">
+                <div className="px-3 py-1 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-2xs">
                   {page} / {totalPages}
-                </span>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="h-8 w-8 p-0 cursor-pointer disabled:opacity-40"
+                  className="h-8 w-8 p-0 border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer disabled:opacity-40 shadow-2xs"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -1315,7 +1365,7 @@ export function EmployeeProcessPage() {
                   size="sm"
                   onClick={() => setPage(totalPages)}
                   disabled={page >= totalPages}
-                  className="h-8 px-2 text-xs cursor-pointer disabled:opacity-40"
+                  className="h-8 px-2.5 text-xs font-semibold border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer disabled:opacity-40 shadow-2xs"
                 >
                   Last
                 </Button>
