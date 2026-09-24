@@ -1,0 +1,213 @@
+[
+  {
+    "Id": "091eb51c312547c3b0c0be96339b895c",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:18:00.3458554Z",
+    "Status": "Success",
+    "DurationMs": 200,
+    "RowsUpdated": 76,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "15284022716",
+      "00000001975"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 2 emps)",
+    "Message": "Processed for empcodes: 15284022716, 00000001975. Completed in 200ms. Updated 76 rows, Inserted 0 rows for 2 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "36b6dc0e275241a1a7a93d30d5df07c8",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:17:58.2805467Z",
+    "Status": "Success",
+    "DurationMs": 227,
+    "RowsUpdated": 76,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "15284022716",
+      "00000001975"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 2 emps)",
+    "Message": "Processed for empcodes: 15284022716, 00000001975. Completed in 227ms. Updated 76 rows, Inserted 0 rows for 2 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "8a582bf4f02c4121832c2f01f087557b",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:17:51.7797403Z",
+    "Status": "Success",
+    "DurationMs": 233,
+    "RowsUpdated": 76,
+    "RowsInserted": 0,
+    "TargetEntry": 2,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "15284022716",
+      "00000001975"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 2 - 2 emps)",
+    "Message": "Processed for empcodes: 15284022716, 00000001975. Completed in 233ms. Updated 76 rows, Inserted 0 rows for 2 employees (Entry 2).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "5d1d2239022c43d48a313fc88a73891e",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:17:25.0905509Z",
+    "Status": "Success",
+    "DurationMs": 217,
+    "RowsUpdated": 76,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "15284022716",
+      "00000001975"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 2 emps)",
+    "Message": "Processed for empcodes: 15284022716, 00000001975. Completed in 217ms. Updated 76 rows, Inserted 0 rows for 2 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "e144538b920b46458f19fc9adbf21a07",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:16:58.8226612Z",
+    "Status": "Success",
+    "DurationMs": 229,
+    "RowsUpdated": 38,
+    "RowsInserted": 0,
+    "TargetEntry": 2,
+    "EmployeeCount": 1,
+    "EmpCodes": [
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 2 - 1 emps)",
+    "Message": "Processed for empcodes: 15284022716. Completed in 229ms. Updated 38 rows, Inserted 0 rows for 1 employees (Entry 2).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "8904b71df2a04c9fb12b54f77a420821",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:16:44.9004172Z",
+    "Status": "Success",
+    "DurationMs": 290,
+    "RowsUpdated": 38,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 1,
+    "EmpCodes": [
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 1 emps)",
+    "Message": "Processed for empcodes: 15284022716. Completed in 290ms. Updated 38 rows, Inserted 0 rows for 1 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "2338b519a6ff45b2a8d0be37d7766187",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:10:47.2180071Z",
+    "Status": "Success",
+    "DurationMs": 210,
+    "RowsUpdated": 38,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 1,
+    "EmpCodes": [
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 1 emps)",
+    "Message": "Processed for empcodes: 15284022716. Completed in 210ms. Updated 38 rows, Inserted 0 rows for 1 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "5ce3d170121c45969d0f8c08d1d700c5",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:10:34.9116079Z",
+    "Status": "Success",
+    "DurationMs": 262,
+    "RowsUpdated": 38,
+    "RowsInserted": 0,
+    "TargetEntry": 2,
+    "EmployeeCount": 1,
+    "EmpCodes": [
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 2 - 1 emps)",
+    "Message": "Processed for empcodes: 15284022716. Completed in 262ms. Updated 38 rows, Inserted 0 rows for 1 employees (Entry 2).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "92ab9e00d4ff4c9285ab588d6c5a51b6",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:04:33.1394499Z",
+    "Status": "Success",
+    "DurationMs": 229,
+    "RowsUpdated": 38,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 1,
+    "EmpCodes": [
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 1 emps)",
+    "Message": "Processed for empcodes: 15284022716. Completed in 229ms. Updated 38 rows, Inserted 0 rows for 1 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "2b5de04dbb364a10ba1455e32c29d3d0",
+    "ProcessDate": "2026-09-24 to 2026-11-01",
+    "ExecutedAt": "2026-09-24T06:02:25.9769869Z",
+    "Status": "Success",
+    "DurationMs": 197,
+    "RowsUpdated": 76,
+    "RowsInserted": 2,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "00808077381",
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 2 emps)",
+    "Message": "Processed for empcodes: 00808077381, 15284022716. Completed in 197ms. Updated 76 rows, Inserted 2 rows for 2 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "ec0cdffbcecd4619b31021b3e3a73f9c",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T06:01:58.6044823Z",
+    "Status": "Success",
+    "DurationMs": 247,
+    "RowsUpdated": 76,
+    "RowsInserted": 0,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "00808077381",
+      "15284022716"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4 - 2 emps)",
+    "Message": "Processed for empcodes: 00808077381, 15284022716. Completed in 247ms. Updated 76 rows, Inserted 0 rows for 2 employees (Entry 4).",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "e1a2b3c4d5e64f7a8b9c0d1e2f3a4b5c",
+    "ProcessDate": "2026-09-24",
+    "ExecutedAt": "2026-09-24T05:54:00Z",
+    "Status": "Success",
+    "DurationMs": 420,
+    "RowsUpdated": 0,
+    "RowsInserted": 2,
+    "TargetEntry": 4,
+    "EmployeeCount": 2,
+    "EmpCodes": [
+      "0000000001",
+      "0000000002"
+    ],
+    "TriggerSource": "Employee Wise Process (Entry 4)",
+    "Message": "Processed for empcodes: 0000000001, 0000000002. Completed in 420ms. Updated 0 rows, Inserted 2 rows (Entry 4).",
+    "ErrorMessage": null
+  }
+]

@@ -1,8 +1,8 @@
 import React from 'react'
-import { Home, Zap, ArrowLeftRight, LogOut, User } from 'lucide-react'
+import { Home, Zap, ArrowLeftRight, Users, LogOut, User } from 'lucide-react'
 import type { UserProfile } from '@/api'
 
-export type PageId = 'home' | 'auto-process' | 'manual-swapping'
+export type PageId = 'home' | 'auto-process' | 'manual-swapping' | 'employee-process'
 
 interface NavbarProps {
   currentPage: PageId
@@ -29,6 +29,12 @@ export function Navbar({ currentPage, onSelectPage, user, onLogout }: NavbarProp
       label: 'Manual Swapping',
       icon: <ArrowLeftRight className="h-4.5 w-4.5" />,
       badge: 'Entry = 2'
+    },
+    {
+      id: 'employee-process',
+      label: 'Employee Process',
+      icon: <Users className="h-4.5 w-4.5" />,
+      badge: 'Entry 2 / 4'
     }
   ]
 

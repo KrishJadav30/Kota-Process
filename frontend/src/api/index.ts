@@ -274,5 +274,88 @@ export const api = {
     })
     if (!res.ok) throw new Error(`Failed to execute manual swapping: ${res.statusText}`)
     return res.json()
+  },
+
+  async getLocations(): Promise<LocationItem[]> {
+    const res = await fetch(`/api/locations?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
+    if (!res.ok) throw new Error(`Failed to load locations: ${res.statusText}`)
+    return res.json()
+  },
+
+  async getEmployees(): Promise<EmployeeItem[]> {
+    const res = await fetch(`/api/employees?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
+    if (!res.ok) throw new Error(`Failed to load employees: ${res.statusText}`)
+    return res.json()
+  },
+
+  async getEmployeeProcessHistory(): Promise<EmployeeProcessHistoryItem[]> {
+    const res = await fetch(`/api/employee-process/history?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
+    if (!res.ok) throw new Error(`Failed to load employee process history: ${res.statusText}`)
+    return res.json()
+  },
+
+  async executeEmployeeProcess(req: EmployeeProcessRequest): Promise<EmployeeProcessHistoryItem> {
+    const res = await fetch(`/api/employee-process/execute?_t=${Date.now()}`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      body: JSON.stringify(req)
+    })
+    const data = await res.json()
+    if (!res.ok || data.success === false) {
+      throw new Error(data.message || 'Failed to execute employee process.')
+    }
+    return data
   }
 }
+
+export interface EmployeeProcessHistoryItem {
+  id: string
+  processDate: string
+  executedAt: string
+  status: 'Success' | 'Failed'
+  durationMs: number
+  rowsUpdated: number
+  rowsInserted: number
+  targetEntry: number
+  employeeCount: number
+  empCodes: string[]
+  triggerSource: string
+  message: string
+  errorMessage?: string | null
+}
+
+export interface LocationItem {
+  location: string
+  locDesc: string
+  employeeCount: number
+}
+
+export interface EmployeeItem {
+  empCode: string
+  name: string
+  entry: number
+  location?: string
+  locationDesc?: string
+}
+
+export interface EmployeeProcessRequest {
+  fromDate: string
+  toDate: string
+  targetEntry: 2 | 4
+  empCodes: string[]
+}
+

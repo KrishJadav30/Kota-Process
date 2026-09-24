@@ -81,6 +81,10 @@ try
     builder.Services.AddSingleton<IManualHistoryService, ManualHistoryService>();
     builder.Services.AddScoped<IManualSwappingService, ManualSwappingService>();
 
+    // Register Employee Wise Process (Entry 2 / 4) Services
+    builder.Services.AddSingleton<IEmployeeProcessHistoryService, EmployeeProcessHistoryService>();
+    builder.Services.AddScoped<IEmployeeProcessService, EmployeeProcessService>();
+
     // Register User Authentication & Security Service
     builder.Services.AddSingleton<IAuthService, AuthService>();
 
@@ -272,6 +276,49 @@ try
         return Results.Ok(result);
     });
 
+    // Employee Wise Process Endpoints
+    app.MapGet("/api/employees", async (IEmployeeProcessService empService) =>
+    {
+        var employees = await empService.GetEmployeesAsync();
+        return Results.Ok(employees);
+    });
+
+    app.MapGet("/api/locations", async (IEmployeeProcessService empService) =>
+    {
+        var locations = await empService.GetLocationsAsync();
+        return Results.Ok(locations);
+    });
+
+    app.MapPost("/api/employee-process/execute", async (IEmployeeProcessService empService, ExecuteEmployeeProcessRequest? req) =>
+    {
+        if (req == null || req.EmpCodes == null || req.EmpCodes.Count == 0)
+        {
+            return Results.BadRequest(new { success = false, message = "Please select at least one employee." });
+        }
+
+        DateTime fromDate;
+        DateTime toDate;
+
+        if (!string.IsNullOrEmpty(req.FromDate) && DateTime.TryParse(req.FromDate, out var parsedFrom))
+        {
+            fromDate = parsedFrom;
+            toDate = (!string.IsNullOrEmpty(req.ToDate) && DateTime.TryParse(req.ToDate, out var parsedTo))
+                ? parsedTo
+                : parsedFrom;
+        }
+        else
+        {
+            fromDate = DateTime.Today;
+            toDate = DateTime.Today;
+        }
+
+        int targetEntry = req.TargetEntry == 2 ? 2 : 4;
+        var result = await empService.ExecuteEmployeeProcessAsync(fromDate, toDate, targetEntry, req.EmpCodes, "Employee Wise Process");
+        return Results.Ok(result);
+    });
+
+    app.MapGet("/api/employee-process/history", (IEmployeeProcessHistoryService history) => Results.Ok(history.GetTopHistory(50)));
+
     // Authentication Endpoints
     app.MapPost("/api/auth/login", async (IAuthService authService, HttpContext ctx, LoginRequest req) =>
     {
@@ -335,4 +382,5 @@ public record RunNowRequest(string? FromDate, string? ToDate, string? TargetDate
 public record ExecuteManualSwappingRequest(string? FromDate, string? ToDate);
 public record LoginRequest(string? Email, string? Password);
 public record LogoutRequest(string? Email);
+public record ExecuteEmployeeProcessRequest(string? FromDate, string? ToDate, int TargetEntry, List<string>? EmpCodes);
 

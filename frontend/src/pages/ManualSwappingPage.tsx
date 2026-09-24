@@ -188,7 +188,7 @@ export function ManualSwappingPage() {
               100% Manual Execution
             </Badge>
             <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 text-purple-700 border-purple-300 bg-purple-50">
-              Entry 2 Rule
+              Entry = 2
             </Badge>
           </div>
           <p className="text-slate-600 text-sm sm:text-base font-normal mt-1">

@@ -3,23 +3,26 @@ import { Navbar, type PageId } from '@/components/Navbar'
 import { HomePage } from '@/pages/HomePage'
 import { AutoProcessPage } from '@/pages/AutoProcessPage'
 import { ManualSwappingPage } from '@/pages/ManualSwappingPage'
+import { EmployeeProcessPage } from '@/pages/EmployeeProcessPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { getAuthUser, api, type UserProfile } from '@/api'
 
 const getInitialPage = (): PageId => {
   // 1. Check window pathname first
   const path = window.location.pathname.toLowerCase()
+  if (path.includes('employee-process') || path.includes('employee')) return 'employee-process'
   if (path.includes('manual-swapping') || path.includes('swapping')) return 'manual-swapping'
   if (path.includes('auto-process') || path.includes('auto')) return 'auto-process'
 
   // 2. Check hash
   const hash = window.location.hash.toLowerCase()
+  if (hash.includes('employee-process') || hash.includes('employee')) return 'employee-process'
   if (hash.includes('manual-swapping') || hash.includes('swapping')) return 'manual-swapping'
   if (hash.includes('auto-process') || hash.includes('auto')) return 'auto-process'
 
   // 3. Fallback to localStorage
   const saved = localStorage.getItem('kota_active_page') as PageId | null
-  if (saved === 'manual-swapping' || saved === 'auto-process' || saved === 'home') {
+  if (saved === 'employee-process' || saved === 'manual-swapping' || saved === 'auto-process' || saved === 'home') {
     return saved
   }
 
@@ -90,7 +93,7 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-30 sm:pt-36 pb-24 sm:pb-32">
+      <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-36 sm:pt-40 lg:pt-44 pb-24 sm:pb-32">
         {currentPage === 'home' && (
           <HomePage onNavigate={handleSelectPage} />
         )}
@@ -99,6 +102,9 @@ export function App() {
         )}
         {currentPage === 'manual-swapping' && (
           <ManualSwappingPage />
+        )}
+        {currentPage === 'employee-process' && (
+          <EmployeeProcessPage />
         )}
       </main>
     </div>

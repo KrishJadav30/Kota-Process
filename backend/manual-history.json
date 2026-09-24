@@ -1,5 +1,16 @@
 [
   {
+    "Id": "05180832659e47268d25290f30e026d7",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T05:59:04.7034199Z",
+    "Status": "Success",
+    "DurationMs": 602,
+    "RowsUpdated": 7,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 11:29:05 AM. Completed in 602ms. Updated 7 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "7d1c34cd8e194a149b63242b798cf33a",
     "ProcessDate": "2026-09-16 to 2026-10-31",
     "ExecutedAt": "2026-09-16T12:03:02.5911502Z",

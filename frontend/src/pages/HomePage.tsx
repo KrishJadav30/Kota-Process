@@ -1,10 +1,10 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Zap, ArrowLeftRight, CheckCircle2 } from 'lucide-react'
+import { Zap, ArrowLeftRight, Users, CheckCircle2 } from 'lucide-react'
 
 interface HomePageProps {
-  onNavigate: (page: 'auto-process' | 'manual-swapping') => void
+  onNavigate: (page: 'auto-process' | 'manual-swapping' | 'employee-process') => void
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
@@ -21,7 +21,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             Welcome to KOTA Process
           </h1>
           <p className="text-slate-600 text-sm sm:text-base font-normal max-w-2xl">
-            Centralized operations hub for automated background tasks, data synchronization, and manual swapping.
+            Centralized operations hub for automated background tasks, data synchronization, manual swapping, and employee-wise batch processing.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl">
@@ -31,7 +31,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       </div>
 
       {/* Quick Access Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Auto Process Card */}
         <Card className="border border-slate-200/90 bg-white hover:border-blue-400 transition-all shadow-xs rounded-xl overflow-hidden group">
           <CardHeader className="p-5 pb-3">
@@ -91,6 +91,38 @@ export function HomePage({ onNavigate }: HomePageProps) {
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Open Manual Swapping</span>
+              <span>→</span>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Employee Wise Process Card */}
+        <Card className="border border-slate-200/90 bg-white hover:border-emerald-400 transition-all shadow-xs rounded-xl overflow-hidden group">
+          <CardHeader className="p-5 pb-3">
+            <div className="h-11 w-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-2xs mb-3 group-hover:scale-105 transition-transform">
+              <Users className="h-5.5 w-5.5" />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
+                Employee Process
+              </CardTitle>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Entry 2 / 4
+              </span>
+            </div>
+            <CardDescription className="text-slate-500 text-xs sm:text-sm font-normal">
+              Targeted employee-wise batch processing with flexible Entry 2 or 4 options.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 pt-0 space-y-3.5">
+            <p className="text-xs sm:text-sm text-slate-600 font-normal">
+              Select specific employees, choose date range and Entry 2/4 mode. Entry = 1 is preserved automatically.
+            </p>
+            <Button
+              onClick={() => onNavigate('employee-process')}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2.5 rounded-xl cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Open Employee Process</span>
               <span>→</span>
             </Button>
           </CardContent>
