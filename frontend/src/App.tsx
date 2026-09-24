@@ -93,7 +93,7 @@ export function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-36 sm:pt-40 lg:pt-44 pb-24 sm:pb-32">
+      <main className="flex-1 w-full max-w-[96%] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-20 sm:pb-28">
         {currentPage === 'home' && (
           <HomePage onNavigate={handleSelectPage} />
         )}

@@ -9,7 +9,8 @@ import {
   Users, Play, CheckCircle2, AlertCircle, RefreshCw, Search, 
   CheckSquare, Square, Calendar, ArrowRight, Filter, 
   ChevronLeft, ChevronRight, Zap, ArrowLeftRight, UserCheck, Check,
-  MapPin, X, ChevronDown, CheckCheck, Clock, User
+  MapPin, X, ChevronDown, CheckCheck, Clock, User,
+  ArrowUpDown, ArrowUp, ArrowDown, Copy
 } from 'lucide-react'
 
 export function EmployeeProcessPage() {
@@ -40,9 +41,20 @@ export function EmployeeProcessPage() {
   const [executionResult, setExecutionResult] = useState<EmployeeProcessHistoryItem | null>(null)
   const [executionError, setExecutionError] = useState<string | null>(null)
 
-  // History state
+  // History state & filters
   const [history, setHistory] = useState<EmployeeProcessHistoryItem[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false)
+  const [historyFilter, setHistoryFilter] = useState<'all' | '4' | '2'>('all')
+  const [historySearch, setHistorySearch] = useState<string>('')
+  const [historySortField, setHistorySortField] = useState<'executedAt' | 'duration' | 'rowsUpdated' | 'empCount'>('executedAt')
+  const [historySortDirection, setHistorySortDirection] = useState<'asc' | 'desc'>('desc')
+  const [selectedHistoryModalItem, setSelectedHistoryModalItem] = useState<EmployeeProcessHistoryItem | null>(null)
+  const [hasCopiedCodes, setHasCopiedCodes] = useState<boolean>(false)
+
+  // Employee Roster sorting state
+  type EmployeeSortField = 'empCode' | 'name' | 'location' | 'entry'
+  const [rosterSortField, setRosterSortField] = useState<EmployeeSortField>('empCode')
+  const [rosterSortDirection, setRosterSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Pagination state
   const [page, setPage] = useState<number>(1)
@@ -94,8 +106,26 @@ export function EmployeeProcessPage() {
   }, [])
 
   useEffect(() => {
+    let isMounted = true
     loadData()
     loadHistory()
+
+    const pollInterval = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const data = await api.getEmployeeProcessHistory()
+        if (isMounted) {
+          setHistory([...data])
+        }
+      } catch (err) {
+        console.warn('Background polling history error:', err)
+      }
+    }, 8000)
+
+    return () => {
+      isMounted = false
+      clearInterval(pollInterval)
+    }
   }, [loadData, loadHistory])
 
   // Filtered employees
@@ -136,14 +166,44 @@ export function EmployeeProcessPage() {
   // Reset to page 1 on filter or search change
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, selectedLocations, entryFilter])
+  }, [searchQuery, selectedLocations, entryFilter, rosterSortField, rosterSortDirection])
+
+  const handleSortRoster = (field: EmployeeSortField) => {
+    if (rosterSortField === field) {
+      setRosterSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setRosterSortField(field)
+      setRosterSortDirection('asc')
+    }
+  }
+
+  // Sorted and filtered employees
+  const sortedFilteredEmployees = useMemo(() => {
+    const list = [...filteredEmployees]
+    list.sort((a, b) => {
+      let comparison = 0
+      if (rosterSortField === 'empCode') {
+        comparison = a.empCode.localeCompare(b.empCode, undefined, { numeric: true })
+      } else if (rosterSortField === 'name') {
+        comparison = a.name.localeCompare(b.name)
+      } else if (rosterSortField === 'location') {
+        const locA = a.locationDesc || a.location || ''
+        const locB = b.locationDesc || b.location || ''
+        comparison = locA.localeCompare(locB)
+      } else if (rosterSortField === 'entry') {
+        comparison = a.entry - b.entry
+      }
+      return rosterSortDirection === 'asc' ? comparison : -comparison
+    })
+    return list
+  }, [filteredEmployees, rosterSortField, rosterSortDirection])
 
   // Paginated employees
-  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize))
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredEmployees.length / pageSize))
   const paginatedEmployees = useMemo(() => {
     const start = (page - 1) * pageSize
-    return filteredEmployees.slice(start, start + pageSize)
-  }, [filteredEmployees, page, pageSize])
+    return sortedFilteredEmployees.slice(start, start + pageSize)
+  }, [sortedFilteredEmployees, page, pageSize])
 
   // Toggle single employee
   const handleToggleEmployee = (empCode: string) => {
@@ -235,6 +295,14 @@ export function EmployeeProcessPage() {
     setToDate(formatLocalDate(lastDay))
   }
 
+  const handlePresetWeekly8Days = () => {
+    const now = new Date()
+    const past = new Date()
+    past.setDate(past.getDate() - 7)
+    setFromDate(formatLocalDate(past))
+    setToDate(formatLocalDate(now))
+  }
+
   // Execute processing
   const handleExecute = async () => {
     if (selectedCodes.size === 0) {
@@ -274,6 +342,17 @@ export function EmployeeProcessPage() {
     return Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1
   }
 
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '-'
+    const d = parseLocalDate(dateStr)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
   const formatDateTime = (isoString?: string) => {
     if (!isoString) return '-'
     try {
@@ -288,6 +367,67 @@ export function EmployeeProcessPage() {
     } catch {
       return isoString
     }
+  }
+
+  const handleSortHistory = (field: 'executedAt' | 'duration' | 'rowsUpdated' | 'empCount') => {
+    if (historySortField === field) {
+      setHistorySortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setHistorySortField(field)
+      setHistorySortDirection('desc')
+    }
+  }
+
+  const filteredAndSortedHistory = useMemo(() => {
+    let result = history.filter(item => {
+      const targetEntry = item.targetEntry || (item.triggerSource?.includes('Entry 2') ? 2 : 4)
+      if (historyFilter === '4' && targetEntry !== 4) return false
+      if (historyFilter === '2' && targetEntry !== 2) return false
+
+      if (historySearch.trim()) {
+        const q = historySearch.trim().toLowerCase()
+        const matchesCode = item.empCodes?.some(c => c.toLowerCase().includes(q))
+        const matchesDate = item.processDate?.toLowerCase().includes(q)
+        const matchesMsg = item.message?.toLowerCase().includes(q)
+        if (!matchesCode && !matchesDate && !matchesMsg) return false
+      }
+
+      return true
+    })
+
+    result.sort((a, b) => {
+      let comparison = 0
+      if (historySortField === 'executedAt') {
+        const timeA = new Date(a.executedAt).getTime() || 0
+        const timeB = new Date(b.executedAt).getTime() || 0
+        comparison = timeA - timeB
+      } else if (historySortField === 'duration') {
+        comparison = a.durationMs - b.durationMs
+      } else if (historySortField === 'rowsUpdated') {
+        comparison = a.rowsUpdated - b.rowsUpdated
+      } else if (historySortField === 'empCount') {
+        const countA = a.employeeCount || a.empCodes?.length || 0
+        const countB = b.employeeCount || b.empCodes?.length || 0
+        comparison = countA - countB
+      }
+      return historySortDirection === 'asc' ? comparison : -comparison
+    })
+
+    return result
+  }, [history, historyFilter, historySearch, historySortField, historySortDirection])
+
+  const entry4HistoryCount = useMemo(() => {
+    return history.filter(h => (h.targetEntry || (h.triggerSource?.includes('Entry 2') ? 2 : 4)) === 4).length
+  }, [history])
+
+  const entry2HistoryCount = useMemo(() => {
+    return history.filter(h => (h.targetEntry || (h.triggerSource?.includes('Entry 2') ? 2 : 4)) === 2).length
+  }, [history])
+
+  const handleCopyCodes = (codes: string[]) => {
+    navigator.clipboard.writeText(codes.join(', '))
+    setHasCopiedCodes(true)
+    setTimeout(() => setHasCopiedCodes(false), 2000)
   }
 
   // Count breakdown for selected items
@@ -398,35 +538,42 @@ export function EmployeeProcessPage() {
               <button
                 type="button"
                 onClick={handlePresetToday}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 cursor-pointer transition-colors"
               >
                 Today
               </button>
               <button
                 type="button"
                 onClick={handlePresetYesterday}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 cursor-pointer transition-colors"
               >
                 Yesterday
               </button>
               <button
                 type="button"
                 onClick={handlePresetLast7Days}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 text-slate-700 hover:text-blue-700 cursor-pointer transition-colors"
               >
                 Last 7 Days
               </button>
               <button
                 type="button"
+                onClick={handlePresetWeekly8Days}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-800 cursor-pointer transition-colors"
+              >
+                Weekly (8 Days)
+              </button>
+              <button
+                type="button"
                 onClick={handlePresetThisMonth}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50/90 hover:bg-blue-100 text-blue-800 cursor-pointer transition-colors"
               >
                 This Month
               </button>
               <button
                 type="button"
                 onClick={handlePresetPrevMonth}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 bg-purple-50/90 hover:bg-purple-100 text-purple-800 cursor-pointer transition-colors"
               >
                 Prev Month
               </button>
@@ -966,10 +1113,58 @@ export function EmployeeProcessPage() {
                         title={areAllFilteredSelected ? 'Deselect all' : 'Select all filtered'}
                       />
                     </th>
-                    <th className="py-3.5 px-4">Employee Code</th>
-                    <th className="py-3.5 px-4">Employee Name</th>
-                    <th className="py-3.5 px-4">Location</th>
-                    <th className="py-3.5 px-4">Master Entry</th>
+                    <th 
+                      onClick={() => handleSortRoster('empCode')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Employee Code</span>
+                        {rosterSortField === 'empCode' ? (
+                          rosterSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortRoster('name')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Employee Name</span>
+                        {rosterSortField === 'name' ? (
+                          rosterSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortRoster('location')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Location</span>
+                        {rosterSortField === 'location' ? (
+                          rosterSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortRoster('entry')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Master Entry</span>
+                        {rosterSortField === 'entry' ? (
+                          rosterSortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
                     <th className="py-3.5 px-4">Batch Rule</th>
                   </tr>
                 </thead>
@@ -1130,114 +1325,472 @@ export function EmployeeProcessPage() {
         </CardContent>
       </Card>
 
-      {/* 5. Recent Execution History Table (Matching Auto Process & Manual Swapping) */}
+      {/* 5. Execution History Logs Table (Matching Auto Process & Manual Swapping) */}
       <Card className="border border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden w-full">
-        <CardHeader className="p-4 sm:p-5 pb-3 sm:pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold shadow-2xs shrink-0">
-              <Clock className="h-4.5 w-4.5" />
-            </div>
+        <CardHeader className="p-4 sm:p-5 pb-3.5 border-b border-slate-200 bg-slate-50/60">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
             <div>
-              <CardTitle className="text-base sm:text-lg font-bold text-slate-900">
-                Recent Employee Batch Executions
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500 font-normal">
-                Audit log of completed employee batch attendance operations.
+              <div className="flex items-center gap-2.5">
+                <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
+                  Execution History Logs
+                </CardTitle>
+                <Badge variant="outline" className="text-xs sm:text-sm font-semibold bg-white text-slate-600 border-slate-300">
+                  Top 50 Executions
+                </Badge>
+              </div>
+              <CardDescription className="text-slate-500 text-xs sm:text-sm font-normal mt-0.5">
+                Audit trail of completed employee batch attendance operations executed on MonthTrns.
               </CardDescription>
             </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadHistory}
-            disabled={isLoadingHistory}
-            className="h-8 text-xs cursor-pointer gap-1.5"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoadingHistory ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-50/90 border-b border-slate-200/90 text-slate-700 font-semibold uppercase tracking-wider text-2xs">
-                  <th className="py-2.5 px-4">Executed At</th>
-                  <th className="py-2.5 px-4">Processed Date</th>
-                  <th className="py-2.5 px-4">Mode</th>
-                  <th className="py-2.5 px-4">Employees</th>
-                  <th className="py-2.5 px-4">Status</th>
-                  <th className="py-2.5 px-4">Rows (Upd / Ins)</th>
-                  <th className="py-2.5 px-4">Duration</th>
-                  <th className="py-2.5 px-4">Summary & Employee Codes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {history.slice(0, 15).map(item => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-4 font-mono text-slate-600 text-2xs whitespace-nowrap">
-                      {formatDateTime(item.executedAt)}
-                    </td>
-                    <td className="py-2.5 px-4 font-mono text-slate-700 text-xs whitespace-nowrap">
-                      {item.processDate}
-                    </td>
-                    <td className="py-2.5 px-4 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded text-2xs font-bold border ${
-                        item.targetEntry === 2 
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200' 
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}>
-                        Entry = {item.targetEntry || (item.triggerSource?.includes('Entry 2') ? 2 : 4)}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 text-xs whitespace-nowrap">
-                      {item.employeeCount || item.empCodes?.length || 1} emps
-                    </td>
-                    <td className="py-2.5 px-4 whitespace-nowrap">
-                      {item.status === 'Success' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                          <span>Success</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                          <AlertCircle className="h-3 w-3 text-rose-600" />
-                          <span>Failed</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-4 font-mono text-xs whitespace-nowrap">
-                      <span className="font-bold text-slate-900">{item.rowsUpdated.toLocaleString()}</span>
-                      <span className="text-slate-400 mx-1">/</span>
-                      <span className="text-slate-600">{item.rowsInserted.toLocaleString()}</span>
-                    </td>
-                    <td className="py-2.5 px-4 font-mono text-slate-600 text-xs whitespace-nowrap">
-                      {item.durationMs}ms
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 text-2xs max-w-sm">
-                      <div className="truncate font-medium text-slate-700" title={item.message}>
-                        {item.message}
-                      </div>
-                      {item.empCodes && item.empCodes.length > 0 && (
-                        <div className="text-2xs font-mono text-slate-500 truncate mt-0.5" title={item.empCodes.join(', ')}>
-                          Codes: {item.empCodes.slice(0, 8).join(', ')}{item.empCodes.length > 8 ? ` (+${item.empCodes.length - 8} more)` : ''}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {history.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400 text-xs">
-                      No employee batch executions recorded yet.
-                    </td>
-                  </tr>
+
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+              {/* Filter Tabs matching AutoProcess segmented pill */}
+              <div className="inline-flex items-center p-1 bg-slate-200/80 rounded-lg text-xs font-semibold shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    historyFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All ({history.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('4')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    historyFilter === '4'
+                      ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                      : 'text-blue-700 hover:text-blue-900'
+                  }`}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Entry 4 ({entry4HistoryCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryFilter('2')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                    historyFilter === '2'
+                      ? 'bg-indigo-600 text-white shadow-2xs font-bold'
+                      : 'text-indigo-800 hover:text-indigo-950'
+                  }`}
+                >
+                  <ArrowLeftRight className="h-3.5 w-3.5" />
+                  <span>Entry 2 ({entry2HistoryCount})</span>
+                </button>
+              </div>
+
+              {/* History Search Bar */}
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter by emp code..."
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  className="pl-8 pr-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 w-36 sm:w-44"
+                />
+                {historySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setHistorySearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
                 )}
-              </tbody>
-            </table>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadHistory}
+                disabled={isLoadingHistory}
+                className="self-start sm:self-auto h-9 px-3.5 text-xs sm:text-sm font-semibold border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 cursor-pointer flex items-center gap-1.5"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoadingHistory ? 'animate-spin text-blue-600' : ''}`} />
+                <span>Refresh Logs</span>
+              </Button>
+            </div>
           </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {history.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 space-y-2">
+              <Clock className="h-8 w-8 text-slate-400 mx-auto" />
+              <p className="text-sm sm:text-base font-semibold text-slate-700">No employee batch executions recorded yet</p>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
+                Select employees and a date range above, then click &quot;Process Employees&quot; to execute attendance calculation. Execution records will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm table-auto">
+                <thead className="border-l-4 border-l-transparent">
+                  <tr className="border-b border-slate-200 bg-slate-100/90 text-slate-600 font-bold uppercase text-xs tracking-wider divide-x divide-slate-200">
+                    <th 
+                      onClick={() => handleSortHistory('executedAt')}
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Date Processed</span>
+                        {historySortField === 'executedAt' ? (
+                          historySortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortHistory('executedAt')}
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[170px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Run Timestamp</span>
+                        {historySortField === 'executedAt' ? (
+                          historySortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">Status</th>
+                    <th 
+                      onClick={() => handleSortHistory('duration')}
+                      className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-right w-[95px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
+                    >
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>Duration</span>
+                        {historySortField === 'duration' ? (
+                          historySortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortHistory('rowsUpdated')}
+                      className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>MonthTrns Records</span>
+                        {historySortField === 'rowsUpdated' ? (
+                          historySortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      onClick={() => handleSortHistory('empCount')}
+                      className="py-3.5 px-3 sm:px-4 w-[280px] cursor-pointer hover:bg-slate-200/70 select-none transition-colors"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>Mode & Target</span>
+                        {historySortField === 'empCount' ? (
+                          historySortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-blue-600" /> : <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 opacity-60" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3 sm:px-4 w-[310px] max-w-[360px]">Details & Summary</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white font-normal">
+                  {filteredAndSortedHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-500">
+                        <p className="text-sm font-semibold">No records found matching current filters</p>
+                        <button
+                          type="button"
+                          onClick={() => { setHistoryFilter('all'); setHistorySearch(''); }}
+                          className="mt-2 text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                        >
+                          Show all records
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAndSortedHistory.map(item => {
+                      const isSuccess = item.status === 'Success'
+                      const targetEntry = item.targetEntry || (item.triggerSource?.includes('Entry 2') ? 2 : 4)
+                      const isEntry2 = targetEntry === 2
+                      const empCount = item.employeeCount || item.empCodes?.length || 1
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`divide-x divide-slate-200 transition-colors ${
+                            !isSuccess
+                              ? 'border-l-4 border-l-rose-500 bg-rose-50/15 hover:bg-rose-50/40'
+                              : isEntry2
+                              ? 'border-l-4 border-l-indigo-600 bg-indigo-50/15 hover:bg-indigo-50/40'
+                              : 'border-l-4 border-l-blue-600 bg-blue-50/15 hover:bg-blue-50/40'
+                          }`}
+                        >
+                          {/* Date Processed */}
+                          <td className="py-3.5 px-3 sm:px-4 font-semibold text-slate-900 whitespace-nowrap text-sm w-[170px]">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className={`h-4 w-4 ${isEntry2 ? 'text-indigo-600' : 'text-blue-600'} shrink-0`} />
+                              <span>{item.processDate}</span>
+                            </div>
+                          </td>
+
+                          {/* Run Timestamp */}
+                          <td className="py-3.5 px-3 sm:px-4 text-slate-700 whitespace-nowrap font-medium text-sm w-[170px]">
+                            {formatDateTime(item.executedAt)}
+                          </td>
+
+                          {/* Status Badge */}
+                          <td className="py-3.5 px-2.5 sm:px-3 whitespace-nowrap text-center w-[100px]">
+                            <span
+                              className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${
+                                isSuccess
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}
+                            >
+                              {isSuccess ? 'Success' : 'Failed'}
+                              <span className="text-2xs">{isSuccess ? '✓' : '✕'}</span>
+                            </span>
+                          </td>
+
+                          {/* Duration */}
+                          <td className="py-3.5 px-2.5 sm:px-3 text-slate-800 whitespace-nowrap text-right text-sm font-semibold w-[95px]">
+                            <span>{item.durationMs.toLocaleString()}</span> <span className="text-slate-500 font-normal text-sm">ms</span>
+                          </td>
+
+                          {/* MonthTrns Records */}
+                          <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap w-[180px]">
+                            <div className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-md font-semibold border ${
+                                  isEntry2
+                                    ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                                }`}
+                              >
+                                {item.rowsUpdated.toLocaleString()} updated
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                                {item.rowsInserted.toLocaleString()} inserted
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Mode & Target - Styled Card */}
+                          <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[280px]">
+                            <div className={`p-2 rounded-lg border flex flex-col gap-1 shadow-2xs ${
+                              isEntry2
+                                ? 'bg-indigo-50/90 border-indigo-200/90 text-indigo-950'
+                                : 'bg-blue-50/90 border-blue-200/90 text-blue-950'
+                            }`}>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-extrabold uppercase tracking-wider text-white shadow-2xs ${
+                                  isEntry2 ? 'bg-indigo-600' : 'bg-blue-600'
+                                }`}>
+                                  {isEntry2 ? <ArrowLeftRight className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                                  Entry = {targetEntry}
+                                </span>
+                                <span className={`text-2xs font-bold px-1.5 py-0.5 rounded ${
+                                  isEntry2 ? 'text-indigo-800 bg-indigo-100/80' : 'text-blue-800 bg-blue-100/80'
+                                }`}>
+                                  {empCount} {empCount === 1 ? 'Employee' : 'Employees'}
+                                </span>
+                              </div>
+                              <div className="text-xs font-semibold leading-snug break-words">
+                                {item.triggerSource || `Employee Wise Process (Entry ${targetEntry})`}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Details & Summary with Clean Employee Code Chips */}
+                          <td className="py-3.5 px-3 sm:px-4 text-slate-700 text-sm w-[310px] max-w-[360px]">
+                            {isSuccess ? (
+                              <div className="space-y-1.5">
+                                <div className="flex items-start gap-2 text-slate-700 text-sm font-normal">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                                  <span className="leading-snug text-xs sm:text-sm">
+                                    Completed in {item.durationMs}ms. Updated {item.rowsUpdated.toLocaleString()} rows, Inserted {item.rowsInserted.toLocaleString()} rows.
+                                  </span>
+                                </div>
+                                {item.empCodes && item.empCodes.length > 0 && (
+                                  <div className="flex items-center gap-1 flex-wrap pl-6">
+                                    <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">Codes:</span>
+                                    {item.empCodes.slice(0, 3).map(code => (
+                                      <span
+                                        key={code}
+                                        className="font-mono text-2xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold"
+                                      >
+                                        {code}
+                                      </span>
+                                    ))}
+                                    {item.empCodes.length > 3 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedHistoryModalItem(item)}
+                                        className="text-2xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 cursor-pointer transition-colors"
+                                      >
+                                        +{item.empCodes.length - 3} more
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-start gap-2 text-rose-700 font-medium text-sm leading-snug break-words">
+                                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600" />
+                                <span className="break-words text-xs sm:text-sm">
+                                  {item.errorMessage || item.message}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+
+              {/* Table Footer matching AutoProcess */}
+              <div className="py-3.5 px-4 sm:px-5 border-t border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs sm:text-sm text-slate-600 font-medium">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span>
+                    Showing {filteredAndSortedHistory.length} of {history.length} execution record{history.length === 1 ? '' : 's'}
+                  </span>
+                  <span className="text-slate-300">|</span>
+                  <span className="inline-flex items-center gap-1.5 text-blue-700 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+                    {entry4HistoryCount} Entry 4
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-indigo-700 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-indigo-600"></span>
+                    {entry2HistoryCount} Entry 2
+                  </span>
+                </div>
+                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Selective employee attendance batch processing active
+                </span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* 6. Employee Batch Execution Details Modal */}
+      {selectedHistoryModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-white ${
+                  selectedHistoryModalItem.targetEntry === 2 ? 'bg-indigo-600' : 'bg-blue-600'
+                }`}>
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    Execution Employee Details
+                  </h3>
+                  <p className="text-xs text-slate-500 font-normal">
+                    {selectedHistoryModalItem.processDate} • {formatDateTime(selectedHistoryModalItem.executedAt)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedHistoryModalItem(null)}
+                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-200 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Stats Bar */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200 grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="text-2xs text-slate-500 font-bold uppercase tracking-wider block">Mode</span>
+                <span className="text-sm font-bold text-slate-900">Entry {selectedHistoryModalItem.targetEntry}</span>
+              </div>
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="text-2xs text-slate-500 font-bold uppercase tracking-wider block">Updated / Inserted</span>
+                <span className="text-sm font-bold text-emerald-700">
+                  {selectedHistoryModalItem.rowsUpdated} / {selectedHistoryModalItem.rowsInserted}
+                </span>
+              </div>
+              <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="text-2xs text-slate-500 font-bold uppercase tracking-wider block">Duration</span>
+                <span className="text-sm font-bold text-slate-900">{selectedHistoryModalItem.durationMs}ms</span>
+              </div>
+            </div>
+
+            {/* Modal Employee Codes Roster */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Targeted Employees ({selectedHistoryModalItem.empCodes?.length || 0})
+                </span>
+                {selectedHistoryModalItem.empCodes && selectedHistoryModalItem.empCodes.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCopyCodes(selectedHistoryModalItem.empCodes)}
+                    className="h-7 text-xs px-2.5 flex items-center gap-1.5 border-slate-300 hover:bg-slate-100 cursor-pointer"
+                  >
+                    {hasCopiedCodes ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="text-emerald-700 font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5 text-slate-600" />
+                        <span>Copy Codes</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                {selectedHistoryModalItem.empCodes?.map(code => (
+                  <span
+                    key={code}
+                    className="font-mono text-xs px-2.5 py-1 rounded-md bg-white border border-slate-200 font-bold text-slate-800 shadow-2xs"
+                  >
+                    {code}
+                  </span>
+                ))}
+              </div>
+
+              {/* Summary message */}
+              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed">
+                <span className="font-bold block mb-0.5">Execution Log Message:</span>
+                {selectedHistoryModalItem.message}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => setSelectedHistoryModalItem(null)}
+                className="h-9 px-4 text-xs font-semibold bg-slate-800 hover:bg-slate-900 text-white cursor-pointer"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
