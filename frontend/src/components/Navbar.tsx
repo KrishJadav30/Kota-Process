@@ -12,7 +12,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ currentPage, onSelectPage, user, onLogout }: NavbarProps) {
-  const navItems: { id: PageId; label: string; icon: React.ReactNode }[] = [
+  const navItems: { id: PageId; label: string; icon: React.ReactNode; badge?: string }[] = [
     {
       id: 'home',
       label: 'Home',
@@ -21,12 +21,14 @@ export function Navbar({ currentPage, onSelectPage, user, onLogout }: NavbarProp
     {
       id: 'auto-process',
       label: 'Auto Process',
-      icon: <Zap className="h-4.5 w-4.5" />
+      icon: <Zap className="h-4.5 w-4.5" />,
+      badge: 'Entry = 4'
     },
     {
       id: 'manual-swapping',
       label: 'Manual Swapping',
-      icon: <ArrowLeftRight className="h-4.5 w-4.5" />
+      icon: <ArrowLeftRight className="h-4.5 w-4.5" />,
+      badge: 'Entry = 2'
     }
   ]
 
@@ -62,14 +64,27 @@ export function Navbar({ currentPage, onSelectPage, user, onLogout }: NavbarProp
                   <button
                     key={item.id}
                     onClick={() => onSelectPage(item.id)}
-                    className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                    className={`flex items-center gap-2.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer min-h-[38px] ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/50'
                     }`}
                   >
                     {item.icon}
-                    <span>{item.label}</span>
+                    <div className="flex flex-col items-start text-left leading-none">
+                      <span className="leading-tight">{item.label}</span>
+                      {item.badge && (
+                        <span
+                          className={`text-[10px] font-bold tracking-tight mt-0.5 ${
+                            isActive
+                              ? 'text-blue-100'
+                              : 'text-slate-500'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 )
               })}

@@ -38,9 +38,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <div className="h-11 w-11 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-2xs mb-3 group-hover:scale-105 transition-transform">
               <Zap className="h-5.5 w-5.5" />
             </div>
-            <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
-              Auto Process
-            </CardTitle>
+            <div className="flex items-center gap-2.5">
+              <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
+                Auto Process
+              </CardTitle>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                Entry = 4
+              </span>
+            </div>
             <CardDescription className="text-slate-500 text-xs sm:text-sm font-normal">
               Autonomous background task scheduler and automated batch processor.
             </CardDescription>
@@ -65,9 +70,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <div className="h-11 w-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-2xs mb-3 group-hover:scale-105 transition-transform">
               <ArrowLeftRight className="h-5.5 w-5.5" />
             </div>
-            <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
-              Manual Swapping
-            </CardTitle>
+            <div className="flex items-center gap-2.5">
+              <CardTitle className="text-lg sm:text-xl font-bold text-slate-900">
+                Manual Swapping
+              </CardTitle>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Entry = 2
+              </span>
+            </div>
             <CardDescription className="text-slate-500 text-xs sm:text-sm font-normal">
               Interactive manual data swapping and immediate transaction operations.
             </CardDescription>

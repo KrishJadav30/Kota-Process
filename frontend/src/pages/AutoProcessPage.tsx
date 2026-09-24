@@ -486,7 +486,7 @@ export function AutoProcessPage() {
             Auto Process
           </h1>
           <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 text-blue-700 border-blue-300 bg-blue-50">
-            Entry 4 Rule
+            Entry = 4
           </Badge>
         </div>
         <p className="text-slate-600 text-sm sm:text-base font-normal mt-1">
