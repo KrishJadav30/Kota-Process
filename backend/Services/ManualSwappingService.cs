@@ -431,12 +431,12 @@ SET
             CASE 
                 WHEN t.NewArr > 0 THEN 1.0
                 WHEN t.NewBIn > 0 THEN 0.5
-                ELSE 0.0 
+                ELSE 1.0 
             END
         WHEN t.H1 = 1 AND t.H2 = 1 THEN 1.0  
         WHEN t.H1 = 1 AND t.H2 = 0 THEN 0.5  
         WHEN t.H1 = 0 AND t.H2 = 1 THEN 0.5  
-        ELSE 0.0 
+        ELSE 1.0 
     END,
         
     -- Update working hours based on presence status

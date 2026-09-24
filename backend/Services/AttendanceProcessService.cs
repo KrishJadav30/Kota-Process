@@ -478,12 +478,12 @@ SELECT
             CASE 
                 WHEN rc.NewArr > 0 THEN 1.0
                 WHEN rc.NewBIn > 0 THEN 0.5
-                ELSE 0.0 
+                ELSE 1.0 
             END
         WHEN rc.H1 = 1 AND rc.H2 = 1 THEN 1.0
         WHEN rc.H1 = 1 AND rc.H2 = 0 THEN 0.5
         WHEN rc.H1 = 0 AND rc.H2 = 1 THEN 0.5
-        ELSE 0.0 
+        ELSE 1.0 
     END,
     wrkhrs = CASE 
         WHEN rc.EmpMstEntry = 1 THEN 

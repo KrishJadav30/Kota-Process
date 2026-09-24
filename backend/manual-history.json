@@ -1,5 +1,27 @@
 [
   {
+    "Id": "d978a301bade44b4bac67f3a8ef0c764",
+    "ProcessDate": "2026-09-24 to 2026-11-30",
+    "ExecutedAt": "2026-09-24T08:52:24.5453545Z",
+    "Status": "Success",
+    "DurationMs": 406,
+    "RowsUpdated": 8,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 02:22:24 PM. Completed in 406ms. Updated 8 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
+    "Id": "e70ac13b91d942f9b40ac9f5733cc733",
+    "ProcessDate": "2026-09-24 to 2026-10-31",
+    "ExecutedAt": "2026-09-24T08:52:08.0017189Z",
+    "Status": "Success",
+    "DurationMs": 782,
+    "RowsUpdated": 8,
+    "TriggerSource": "Manual Swapping (Entry 2)",
+    "Message": "Ran at 02:22:08 PM. Completed in 782ms. Updated 8 rows in MonthTrns.",
+    "ErrorMessage": null
+  },
+  {
     "Id": "05180832659e47268d25290f30e026d7",
     "ProcessDate": "2026-09-24 to 2026-10-31",
     "ExecutedAt": "2026-09-24T05:59:04.7034199Z",
